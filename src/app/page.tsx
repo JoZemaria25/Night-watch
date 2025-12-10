@@ -76,8 +76,16 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <PolicyBuilder />
-            <AssetStream />
-            <TenantList />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white">Live Assets</h2>
+              <a href="/properties" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">View All</a>
+            </div>
+            <AssetStream limit={5} />
+            <div className="flex items-center justify-between mb-4 mt-8">
+              <h2 className="text-xl font-semibold text-white">Tenants</h2>
+              <a href="/tenants" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">View All</a>
+            </div>
+            <TenantList limit={5} />
           </div>
 
           <div className="lg:col-span-1">

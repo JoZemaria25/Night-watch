@@ -17,17 +17,17 @@ type Tenant = {
     };
 };
 
-export function TenantList() {
+export function TenantList({ limit }: { limit?: number }) {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchTenants();
-    }, []);
+    }, [limit]);
 
     async function fetchTenants() {
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from("tenants")
                 .select(`
           *,
@@ -36,6 +36,12 @@ export function TenantList() {
           )
         `)
                 .order("full_name");
+
+            if (limit) {
+                query = query.limit(limit);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
             if (data) {

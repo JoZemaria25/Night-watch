@@ -16,17 +16,24 @@ type Property = {
   image_url?: string; // New field for visuals
 };
 
-export function AssetStream() {
+export function AssetStream({ limit }: { limit?: number }) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProperties();
-  }, []);
+  }, [limit]);
 
   async function fetchProperties() {
     try {
-      const { data, error } = await supabase.from('properties').select('*').order('address');
+      let query = supabase.from('properties').select('*').order('address');
+
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       if (data) {
         const enhancedData = data.map((prop: any, index: number) => ({
