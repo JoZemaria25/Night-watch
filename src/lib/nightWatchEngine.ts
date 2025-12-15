@@ -1,88 +1,135 @@
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@supabase/ssr";
+import { differenceInDays } from "date-fns";
+import { sendEmail } from "@/lib/emailService";
 
-type Property = {
-    id: string;
-    address: string;
-    lease_end?: string;
-    rent_due_day?: number;
-    next_inspection_date?: string;
+export type PolicyRow = {
+    id: number;
+    scope: string;
+    metric: string;
+    operator: string;
+    value: string;
+    recipient: string;
 };
 
-export async function runNightWatch() {
-    console.log("🌙 Night Watch Started...");
+export async function runNightWatch(policies: PolicyRow[]) {
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-    // 1. Fetch Active Policies
-    const { data: policies } = await supabase.from('policies').select('*');
-    if (!policies?.length) return { success: false, logs: ["❌ No Policies Defined"] };
-
-    // 2. Fetch Properties
-    const { data: properties } = await supabase.from('properties').select('*');
-    if (!properties?.length) return { success: false, logs: ["❌ No Properties Found"] };
+    // 1. Permission Check (Browser only)
+    if (typeof window !== 'undefined' && "Notification" in window) {
+        if (Notification.permission !== "granted") {
+            await Notification.requestPermission();
+        }
+    }
 
     const logs: string[] = [];
-    let actionsTriggered = 0;
-    const today = new Date();
-    const currentDay = today.getDate();
+    logs.push(`🚀 STARTING DIAGNOSTIC SCAN...`);
 
-    // 3. THE BRAIN: Loop through every property
-    for (const property of properties as Property[]) {
+    const { data: properties } = await supabase.from('properties').select('*');
+    const { data: tenants } = await supabase.from('tenants').select('*');
 
-        // --- CHECK 1: RENT REMINDER ---
-        if (property.rent_due_day && property.rent_due_day === currentDay) {
-            actionsTriggered++;
-            const msg = `💰 RENT DUE: ${property.address} (Day ${currentDay})`;
-            logs.push(msg);
-            await logAction(property.id, 'rent_reminder', msg);
-        }
+    if (!properties || properties.length === 0) {
+        return { success: false, logs: ["❌ No properties found."] };
+    }
 
-        // --- CHECK 2: INSPECTION REMINDER (30 Days Out) ---
-        if (property.next_inspection_date) {
-            const inspectionDate = new Date(property.next_inspection_date);
-            const diffTime = inspectionDate.getTime() - today.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    for (const prop of properties) {
+        for (const rule of policies) {
 
-            if (diffDays === 30) {
-                actionsTriggered++;
-                const msg = `🔍 INSPECTION: ${property.address} is in 30 days.`;
-                logs.push(msg);
-                await logAction(property.id, 'schedule_inspection', msg);
+            // A. SCOPE CHECK
+            const propType = prop.type || 'residential';
+            const isGlobal = rule.scope === 'global';
+            const isTypeMatch = rule.scope === propType;
+            const isExactMatch = rule.scope === String(prop.id);
+
+            if (!isGlobal && !isTypeMatch && !isExactMatch) continue;
+
+            // B. TRIGGER CHECK (ZONE LOGIC)
+            let triggered = false;
+            let logMessage = "";
+            let severity = "info";
+            let emailType: 'inspection' | 'notice' = 'inspection'; // Default
+
+            if (rule.metric === 'lease_end' && prop.lease_end) {
+                const days = differenceInDays(new Date(prop.lease_end), new Date());
+                let zone = 'safe';
+
+                // ZONE A: INSPECTION (60-90 Days)
+                if (days <= 90 && days > 30) {
+                    zone = 'inspection';
+                    emailType = 'inspection';
+                }
+                // ZONE B: CRITICAL NOTICE (< 30 Days)
+                else if (days <= 30) {
+                    zone = 'notice';
+                    emailType = 'notice';
+                }
+
+                // Skip if Safe (unless we want to log everything, but usually we only want alerts)
+                if (zone === 'safe') continue;
+
+                // Check against rule value if needed, or just rely on Zone
+                // For this upgrade, Zone Logic overrides the simple value check for lease_end
+                triggered = true;
+                logMessage = `Lease Alert (${zone.toUpperCase()}): ${prop.address} (${days} days left)`;
+                severity = zone === 'notice' ? 'warning' : 'info';
             }
-        }
+            else if (rule.metric === 'rent_due') {
+                const today = new Date().getDate();
+                if (today >= parseInt(rule.value)) {
+                    triggered = true;
+                    logMessage = `Rent Due: ${prop.address}`;
+                    severity = "info";
+                    emailType = 'notice'; // Treat rent due as a notice
+                }
+            }
 
-        // --- CHECK 3: LEASE POLICIES (Existing Logic) ---
-        if (property.lease_end) {
-            const leaseDate = new Date(property.lease_end);
-            const diffTime = leaseDate.getTime() - today.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            // C. ACTION EXECUTION
+            if (triggered) {
+                logs.push(`🔔 ${logMessage}`);
 
-            for (const policy of policies) {
-                if (diffDays === policy.days_offset) {
-                    actionsTriggered++;
-                    const msg = `✅ POLICY MATCH: ${property.address} is exactly ${diffDays} days away from lease end.`;
-                    logs.push(msg);
-                    await logAction(property.id, policy.event_trigger, msg);
+                // 1. NOTIFY MANAGER (Browser Notification)
+                if (rule.recipient === 'manager') {
+                    if (typeof window !== 'undefined' && "Notification" in window && Notification.permission === "granted") {
+                        new Notification("Night Watch Alert", { body: logMessage });
+                    }
+                }
+                // 2. NOTIFY TENANT (Email)
+                else if (rule.recipient === 'tenant') {
+                    const tenant = tenants?.find(t => t.property_id === prop.id);
+                    if (tenant) {
+                        await sendEmail({
+                            to: tenant.email,
+                            name: tenant.full_name,
+                            type: emailType,
+                            address: prop.address,
+                            daysRemaining: rule.metric === 'lease_end' ? differenceInDays(new Date(prop.lease_end!), new Date()) : undefined
+                        });
+                        logs.push(`✉️ Email sent to ${tenant.full_name}`);
+                    } else {
+                        logs.push(`⚠️ No tenant found for ${prop.address}`);
+                    }
+                }
+
+                // 3. PERSIST TO DB
+                console.log("Attempting DB Write for:", logMessage);
+                const { error } = await supabase.from('asset_log').insert({
+                    message: logMessage,
+                    status: severity,
+                    property_id: prop.id
+                });
+
+                if (error) {
+                    console.error("❌ DATABASE WRITE FAILED:", error.message, error.details);
+                    logs.push(`(DB Error: ${error.message})`);
+                } else {
+                    console.log("✅ Database Write Success");
                 }
             }
         }
     }
 
-    if (actionsTriggered === 0) {
-        logs.push(`ℹ️ Scan Complete. No actions triggered for ${properties.length} properties.`);
-    }
-
-    return {
-        success: true,
-        count: actionsTriggered,
-        logs: logs
-    };
-}
-
-// Helper to log to Supabase
-async function logAction(propertyId: string, policyName: string, status: string) {
-    await supabase.from('asset_log').insert({
-        property_id: propertyId,
-        policy_name: policyName,
-        status: 'Sent', // In a real app, this might be 'Pending' until email is sent
-        created_at: new Date().toISOString()
-    });
+    logs.push(`✅ SYNC COMPLETE.`);
+    return { success: true, logs };
 }

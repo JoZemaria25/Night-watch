@@ -10,20 +10,24 @@ import { TenantRequest } from "@/components/TenantRequest";
 import { MaintenanceList } from "@/components/MaintenanceList";
 import { Button } from "@/components/ui/button";
 import { Play, ShieldCheck } from "lucide-react";
-import { runNightWatch } from "@/lib/nightWatchEngine";
+import { runNightWatch, PolicyRow } from "@/lib/nightWatchEngine";
 import { useState } from "react";
 import { PortfolioPulse } from "@/components/PortfolioPulse";
 
 export default function Home() {
   const [running, setRunning] = useState(false);
+  const [policies, setPolicies] = useState<PolicyRow[]>([
+    { id: 1, scope: "global", metric: "lease_end", operator: "<", value: "90", recipient: "manager" }
+  ]);
 
   const handleRunEngine = async () => {
     setRunning(true);
-    const result = await runNightWatch();
+    // Pass the current UI state to the engine
+    const result = await runNightWatch(policies);
     setRunning(false);
     if (result.success) {
       alert(`Night Watch Complete!\n\n${result.logs.join("\n")}`);
-      window.location.reload();
+      // window.location.reload(); // Removed reload to keep state visible
     }
   };
 
@@ -75,16 +79,10 @@ export default function Home() {
         {/* The Control Deck */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <PolicyBuilder />
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-white">Live Assets</h2>
-              <a href="/properties" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">View All</a>
-            </div>
+            <PolicyBuilder policies={policies} setPolicies={setPolicies} />
+
             <AssetStream limit={5} />
-            <div className="flex items-center justify-between mb-4 mt-8">
-              <h2 className="text-xl font-semibold text-white">Tenants</h2>
-              <a href="/tenants" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">View All</a>
-            </div>
+
             <TenantList limit={5} />
           </div>
 

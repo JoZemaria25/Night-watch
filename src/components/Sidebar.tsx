@@ -31,7 +31,7 @@ export function Sidebar() {
     ];
 
     return (
-        <div className="w-64 h-screen bg-zinc-950 border-r border-zinc-800 flex flex-col shrink-0">
+        <div className="w-full h-full bg-zinc-950 flex flex-col shrink-0">
             {/* Logo Area */}
             <div className="p-6 border-b border-zinc-900">
                 <div className="flex items-center gap-2 text-indigo-500 mb-1">
@@ -54,8 +54,8 @@ export function Sidebar() {
                             key={link.href}
                             href={link.href}
                             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
-                                    ? "bg-zinc-900 text-white shadow-inner border border-zinc-800"
-                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50"
+                                ? "bg-zinc-900 text-white shadow-inner border border-zinc-800"
+                                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50"
                                 }`}
                         >
                             <Icon className={`w-4 h-4 ${isActive ? "text-indigo-400" : "text-zinc-600"}`} />

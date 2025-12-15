@@ -1,155 +1,105 @@
 "use client";
-
-import React, { useState } from "react";
-import { Plus, Save, Wand2, Loader2, Check } from "lucide-react";
-import { supabase } from "@/lib/supabase"; // Import the connection
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PolicyRow } from "@/lib/nightWatchEngine";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
-export function PolicyBuilder() {
-    // 1. STATE: These variables hold the user's choices
-    const [trigger, setTrigger] = useState("lease_end");
-    const [days, setDays] = useState("90");
-    const [action, setAction] = useState("renewal_email");
+interface Props {
+    policies: PolicyRow[];
+    setPolicies: (p: PolicyRow[]) => void;
+}
 
-    // UI States
-    const [isSaving, setIsSaving] = useState(false);
-    const [isSaved, setIsSaved] = useState(false);
+export function PolicyBuilder({ policies, setPolicies }: Props) {
+    const [propertyOptions, setPropertyOptions] = useState<{ id: string; address: string }[]>([]);
 
-    // 2. THE LOGIC: Send data to Supabase
-    async function handleCertify() {
-        setIsSaving(true);
+    useEffect(() => {
+        const fetchProperties = async () => {
+            const supabase = createBrowserClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            );
+            const { data } = await supabase.from('properties').select('id, address');
+            if (data) setPropertyOptions(data);
+        };
+        fetchProperties();
+    }, []);
 
-        // The "Write" Operation
-        const { error } = await supabase
-            .from('policies')
-            .insert([
-                {
-                    event_trigger: trigger,
-                    days_offset: parseInt(days),
-                    action_type: action
-                }
-            ]);
+    const addPolicy = () => {
+        setPolicies([
+            ...policies,
+            { id: Date.now(), scope: "global", metric: "rent_due", operator: "=", value: "1", recipient: "tenant" }
+        ]);
+    };
 
-        setIsSaving(false);
+    const removePolicy = (id: number) => {
+        setPolicies(policies.filter((p) => p.id !== id));
+    };
 
-        if (error) {
-            console.error("Failed to save:", error);
-            alert("Error saving rule. Check console.");
-        } else {
-            // Success Feedback
-            setIsSaved(true);
-            // Reset the "Success" state after 3 seconds so they can add another
-            setTimeout(() => setIsSaved(false), 3000);
-        }
-    }
+    const updatePolicy = (id: number, field: keyof PolicyRow, value: string) => {
+        setPolicies(policies.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+    };
 
     return (
-        <Card className="w-full border-zinc-200 shadow-sm bg-white">
-            <CardHeader>
-                <div className="flex items-center gap-2">
-                    <div className="p-2 bg-zinc-100 rounded-lg">
-                        <Wand2 className="h-5 w-5 text-zinc-900" />
+        <Card className="bg-zinc-900/50 border-zinc-800 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-indigo-400">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-xs font-bold tracking-widest uppercase">Automation Logic</span>
                     </div>
-                    <div>
-                        <CardTitle className="text-lg font-medium text-zinc-900">
-                            Automation Logic
-                        </CardTitle>
-                        <CardDescription>
-                            Define the rules that trigger the Night Watch.
-                        </CardDescription>
-                    </div>
+                    <CardTitle className="text-white text-xl">Policy Engine</CardTitle>
                 </div>
             </CardHeader>
-            <CardContent>
-                <div className="p-6 bg-zinc-50/50 rounded-xl border border-zinc-100">
-                    <div className="flex flex-wrap items-center gap-3 text-lg text-zinc-600 font-light leading-relaxed">
-                        <span>When a</span>
-
-                        {/* Variable 1: TRIGGER */}
-                        <Select onValueChange={setTrigger} defaultValue={trigger}>
-                            <SelectTrigger className="w-[180px] bg-white border-zinc-200 font-medium text-zinc-900 h-10 shadow-sm">
-                                <SelectValue placeholder="Select Event" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="lease_end">Lease Ends</SelectItem>
-                                <SelectItem value="rent_due">Rent is Due</SelectItem>
-                                <SelectItem value="inspection">Inspection Due</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <span>is</span>
-
-                        {/* Variable 2: DAYS */}
-                        <div className="flex items-center gap-2">
-                            <Input
-                                type="number"
-                                value={days}
-                                onChange={(e) => setDays(e.target.value)}
-                                className="w-20 bg-white border-zinc-200 font-medium text-zinc-900 h-10 text-center shadow-sm"
-                            />
-                            <span className="font-medium text-zinc-900">Days</span>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    {policies.map((policy) => (
+                        <div key={policy.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-zinc-950/50 p-3 rounded-lg border border-zinc-800/50">
+                            {/* SCOPE */}
+                            <div className="col-span-3">
+                                <select value={policy.scope} onChange={(e) => updatePolicy(policy.id, "scope", e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded h-9 px-2">
+                                    <optgroup label="General">
+                                        <option value="global">🌐 All Properties</option>
+                                        <option value="residential">🏠 Residential</option>
+                                        <option value="commercial">🏢 Commercial</option>
+                                    </optgroup>
+                                    <optgroup label="Specific Assets">
+                                        {propertyOptions.map((prop) => (
+                                            <option key={prop.id} value={prop.id}>📍 {prop.address}</option>
+                                        ))}
+                                    </optgroup>
+                                </select>
+                            </div>
+                            {/* TRIGGER */}
+                            <div className="col-span-3">
+                                <select value={policy.metric} onChange={(e) => updatePolicy(policy.id, "metric", e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-white text-xs rounded h-9 px-2">
+                                    <option value="lease_end">Lease Ends</option>
+                                    <option value="rent_due">Rent Due</option>
+                                </select>
+                            </div>
+                            {/* LOGIC */}
+                            <div className="col-span-3 flex gap-1">
+                                <select value={policy.operator} onChange={(e) => updatePolicy(policy.id, "operator", e.target.value)} className="w-12 bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs rounded h-9 px-1 text-center">
+                                    <option value="<">&lt;</option><option value=">">&gt;</option><option value="=">=</option>
+                                </select>
+                                <input type="number" value={policy.value} onChange={(e) => updatePolicy(policy.id, "value", e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-white text-xs rounded h-9 px-2" />
+                            </div>
+                            {/* ACTION */}
+                            <div className="col-span-2">
+                                <select value={policy.recipient} onChange={(e) => updatePolicy(policy.id, "recipient", e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 text-emerald-400 text-xs rounded h-9 px-2">
+                                    <option value="manager">Alert Me</option><option value="tenant">Email Tenant</option>
+                                </select>
+                            </div>
+                            {/* DELETE */}
+                            <div className="col-span-1 flex justify-end">
+                                <button onClick={() => removePolicy(policy.id)} className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-950/30 rounded"><Trash2 className="w-4 h-4" /></button>
+                            </div>
                         </div>
-
-                        <span>away, automatically send</span>
-
-                        {/* Variable 3: ACTION */}
-                        <Select onValueChange={setAction} defaultValue={action}>
-                            <SelectTrigger className="w-[240px] bg-white border-zinc-200 font-medium text-indigo-600 h-10 shadow-sm">
-                                <SelectValue placeholder="Select Action" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="renewal_email">Renewal Notice (Email)</SelectItem>
-                                <SelectItem value="sms_reminder">Payment Reminder (SMS)</SelectItem>
-                                <SelectItem value="create_task">Create Admin Task</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <span>to the Tenant.</span>
-                    </div>
+                    ))}
                 </div>
+                <Button onClick={addPolicy} variant="outline" className="w-full border-dashed border-zinc-800 text-zinc-500 hover:text-white h-9 text-xs"><Plus className="w-3 h-3 mr-2" />Add Logic Rule</Button>
             </CardContent>
-            <CardFooter className="flex justify-between border-t border-zinc-100 bg-zinc-50/30 px-6 py-4 rounded-b-xl">
-                <Button variant="ghost" className="text-zinc-500 hover:text-zinc-900">
-                    <Plus className="mr-2 h-4 w-4" /> Add Condition
-                </Button>
-
-                {/* THE ACTIVE BUTTON */}
-                <Button
-                    onClick={handleCertify}
-                    disabled={isSaving || isSaved}
-                    className={isSaved ? "bg-emerald-600 text-white" : "bg-zinc-900 text-white hover:bg-zinc-800 shadow-md"}
-                >
-                    {isSaving ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
-                        </>
-                    ) : isSaved ? (
-                        <>
-                            <Check className="mr-2 h-4 w-4" /> Rule Active
-                        </>
-                    ) : (
-                        <>
-                            <Save className="mr-2 h-4 w-4" /> Certify Rule
-                        </>
-                    )}
-                </Button>
-            </CardFooter>
         </Card>
     );
 }
