@@ -145,7 +145,7 @@ export function AddTenant() {
                 <SheetFooter>
                     <Button
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving || !organizationId}
                         className="w-full bg-indigo-600 hover:bg-indigo-700"
                     >
                         {saving ? "Processing..." : "Register Tenant"}

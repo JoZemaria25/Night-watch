@@ -136,7 +136,7 @@ export function AddProperty() {
         <SheetFooter>
           <Button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !organizationId}
             className="w-full bg-indigo-600 hover:bg-indigo-700"
           >
             {saving ? "Encrypting..." : "Initialize Asset"}
