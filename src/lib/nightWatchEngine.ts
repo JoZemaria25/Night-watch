@@ -27,11 +27,30 @@ export async function runNightWatch(policies: PolicyRow[]) {
     const logs: string[] = [];
     logs.push(`🚀 STARTING DIAGNOSTIC SCAN...`);
 
-    const { data: properties } = await supabase.from('properties').select('*');
-    const { data: tenants } = await supabase.from('tenants').select('*');
+    // Fetch Current User & Organization
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { success: false, logs: ["❌ No authenticated user found."] };
+    }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile?.organization_id) {
+        return { success: false, logs: ["❌ No organization found for user."] };
+    }
+
+    const orgId = profile.organization_id;
+    logs.push(`🏢 Organization ID: ${orgId}`);
+
+    const { data: properties } = await supabase.from('properties').select('*').eq('organization_id', orgId);
+    const { data: tenants } = await supabase.from('tenants').select('*').eq('organization_id', orgId);
 
     if (!properties || properties.length === 0) {
-        return { success: false, logs: ["❌ No properties found."] };
+        return { success: false, logs: ["❌ No properties found for this organization."] };
     }
 
     for (const prop of properties) {
@@ -117,7 +136,8 @@ export async function runNightWatch(policies: PolicyRow[]) {
                 const { error } = await supabase.from('asset_log').insert({
                     message: logMessage,
                     status: severity,
-                    property_id: prop.id
+                    property_id: prop.id,
+                    organization_id: orgId
                 });
 
                 if (error) {

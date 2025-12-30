@@ -24,15 +24,41 @@ export function AddProperty() {
   const [rentDay, setRentDay] = useState("");
   const [inspectionDate, setInspectionDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+
+  // Fetch Organization ID on mount
+  useState(() => {
+    async function fetchOrgId() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          setOrganizationId(profile.organization_id);
+        }
+      }
+    }
+    fetchOrgId();
+  });
 
   async function handleSave() {
+    if (!organizationId) {
+      alert("Error: Could not determine your organization. Please try reloading.");
+      return;
+    }
+
     setSaving(true);
     const { error } = await supabase.from('properties').insert({
       address,
       city,
       lease_end: leaseEnd,
       rent_due_day: rentDay ? parseInt(rentDay) : null,
-      next_inspection_date: inspectionDate
+      next_inspection_date: inspectionDate,
+      organization_id: organizationId
     });
     setSaving(false);
 

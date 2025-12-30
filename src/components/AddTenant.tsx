@@ -35,16 +35,40 @@ export function AddTenant() {
     const [propertyId, setPropertyId] = useState("");
     const [properties, setProperties] = useState<Property[]>([]);
     const [saving, setSaving] = useState(false);
+    const [organizationId, setOrganizationId] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchProperties() {
-            const { data } = await supabase.from("properties").select("id, address");
-            if (data) setProperties(data);
+        async function init() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('organization_id')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile?.organization_id) {
+                    setOrganizationId(profile.organization_id);
+
+                    // Fetch properties for this organization
+                    const { data } = await supabase
+                        .from("properties")
+                        .select("id, address")
+                        .eq('organization_id', profile.organization_id);
+
+                    if (data) setProperties(data);
+                }
+            }
         }
-        fetchProperties();
+        init();
     }, []);
 
     async function handleSave() {
+        if (!organizationId) {
+            alert("Error: Could not determine your organization. Please try reloading.");
+            return;
+        }
+
         setSaving(true);
         const { error } = await supabase.from("tenants").insert({
             full_name: fullName,
@@ -52,6 +76,7 @@ export function AddTenant() {
             phone,
             property_id: propertyId,
             status: "Active",
+            organization_id: organizationId
         });
         setSaving(false);
 
