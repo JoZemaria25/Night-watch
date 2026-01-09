@@ -57,34 +57,40 @@ export default function SettingsPage() {
         }
     };
 
-    const handleCreateOrg = async () => {
-        if (!orgName.trim()) return;
+    const handleCreateOrganization = async (e: React.SyntheticEvent) => {
+        e.preventDefault();
         setCreating(true);
 
         try {
-            // 1. Create Org
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("No user found");
+
+            // 1. Create Org and FORCE return of data
             const { data: newOrg, error: createError } = await supabase
                 .from('organizations')
                 .insert({ name: orgName })
-                .select()
+                .select() // <--- CRITICAL: Asks DB to return the new row
                 .single();
 
             if (createError) throw createError;
+            if (!newOrg) throw new Error("Organization created but no data returned.");
 
-            // 2. Link to Profile
+            console.log("Organization Created:", newOrg);
+
+            // 2. Link Profile to new Org
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({ organization_id: newOrg.id })
-                .eq('id', profile.id);
+                .update({ organization_id: newOrg.id }) // <--- Safe access now
+                .eq('id', user.id);
 
             if (updateError) throw updateError;
 
-            // 3. Refresh Data
-            await fetchData();
-            setOrgName("");
+            // 3. Success State
+            window.location.reload(); // Force reload to refresh context
 
-        } catch (error: any) {
-            alert("Failed to create organization: " + error.message);
+        } catch (err: any) {
+            console.error("Creation Error:", err);
+            alert(`Failed to create organization: ${err.message}`);
         } finally {
             setCreating(false);
         }
@@ -187,7 +193,7 @@ export default function SettingsPage() {
                     </CardContent>
                     <CardFooter>
                         <Button
-                            onClick={handleCreateOrg}
+                            onClick={handleCreateOrganization}
                             disabled={creating || !orgName.trim()}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white"
                         >
