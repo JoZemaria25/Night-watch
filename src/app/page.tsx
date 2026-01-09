@@ -3,7 +3,7 @@
 import { AssetStream } from "@/components/AssetStream";
 import { PolicyBuilder } from "@/components/PolicyBuilder";
 import { ActivityFeed } from "@/components/ActivityFeed";
-import { AddProperty } from "@/components/AddProperty"; // <--- THIS WAS MISSING
+import { AddProperty } from "@/components/AddProperty";
 import { AddTenant } from "@/components/AddTenant";
 import { TenantList } from "@/components/TenantList";
 import { TenantRequest } from "@/components/TenantRequest";
@@ -11,14 +11,37 @@ import { MaintenanceList } from "@/components/MaintenanceList";
 import { Button } from "@/components/ui/button";
 import { Play, ShieldCheck } from "lucide-react";
 import { runNightWatch, PolicyRow } from "@/lib/nightWatchEngine";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PortfolioPulse } from "@/components/PortfolioPulse";
+import { OnboardingModal } from "@/components/OnboardingModal";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const [running, setRunning] = useState(false);
   const [policies, setPolicies] = useState<PolicyRow[]>([
     { id: 1, scope: "global", metric: "lease_end", operator: "<", value: "90", recipient: "manager" }
   ]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profile && !profile.organization_id) {
+          setShowOnboarding(true);
+        }
+      }
+      setLoading(false);
+    }
+    checkUser();
+  }, []);
 
   const handleRunEngine = async () => {
     setRunning(true);
@@ -31,8 +54,12 @@ export default function Home() {
     }
   };
 
+  if (loading) return null; // Or a loading spinner
+
   return (
     <main className="min-h-screen relative">
+      <OnboardingModal isOpen={showOnboarding} />
+
       <div className="max-w-6xl mx-auto py-12 px-6 space-y-12">
 
         {/* Header */}
