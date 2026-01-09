@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Building } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ export function AddProperty() {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
   // Fetch Organization ID on mount
-  useState(() => {
+  useEffect(() => {
     async function fetchOrgId() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -43,7 +43,7 @@ export function AddProperty() {
       }
     }
     fetchOrgId();
-  });
+  }, []);
 
   async function handleSave() {
     if (!organizationId) {
