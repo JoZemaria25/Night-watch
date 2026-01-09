@@ -62,34 +62,21 @@ export default function SettingsPage() {
         setCreating(true);
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("No user found");
+            // Call the Database Function (RPC)
+            const { data, error } = await supabase
+                .rpc('create_organization_and_link', {
+                    org_name: orgName
+                });
 
-            // 1. Create Org and FORCE return of data
-            const { data: newOrg, error: createError } = await supabase
-                .from('organizations')
-                .insert({ name: orgName })
-                .select() // <--- CRITICAL: Asks DB to return the new row
-                .single();
+            if (error) throw error;
 
-            if (createError) throw createError;
-            if (!newOrg) throw new Error("Organization created but no data returned.");
+            console.log("Success:", data);
 
-            console.log("Organization Created:", newOrg);
-
-            // 2. Link Profile to new Org
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ organization_id: newOrg.id }) // <--- Safe access now
-                .eq('id', user.id);
-
-            if (updateError) throw updateError;
-
-            // 3. Success State
-            window.location.reload(); // Force reload to refresh context
+            // Reload to reflect changes
+            window.location.reload();
 
         } catch (err: any) {
-            console.error("Creation Error:", err);
+            console.error("RPC Error:", err);
             alert(`Failed to create organization: ${err.message}`);
         } finally {
             setCreating(false);
