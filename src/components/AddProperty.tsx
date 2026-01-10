@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Building } from "lucide-react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import {
   SheetTitle,
   SheetTrigger,
   SheetFooter,
-  SheetClose
 } from "@/components/ui/sheet";
 
 export function AddProperty() {
@@ -52,6 +51,8 @@ export function AddProperty() {
     }
 
     setSaving(true);
+    // Note: Assuming 'next_inspection_date' based on previous schema context. 
+    // If the schema strictly requires 'next_inspection', this key should be updated.
     const { error } = await supabase.from('properties').insert({
       address,
       city,
@@ -90,6 +91,7 @@ export function AddProperty() {
               className="bg-zinc-900 border-zinc-800 focus:ring-indigo-500"
               placeholder="e.g. 12 Lekki Phase 1"
               onChange={(e) => setAddress(e.target.value)}
+              value={address}
             />
           </div>
           <div className="grid gap-2">
@@ -98,6 +100,7 @@ export function AddProperty() {
               className="bg-zinc-900 border-zinc-800"
               placeholder="e.g. Lagos"
               onChange={(e) => setCity(e.target.value)}
+              value={city}
             />
           </div>
 
@@ -111,6 +114,7 @@ export function AddProperty() {
                 className="bg-zinc-900 border-zinc-800"
                 placeholder="e.g. 25"
                 onChange={(e) => setRentDay(e.target.value)}
+                value={rentDay}
               />
             </div>
             <div className="grid gap-2">
@@ -119,6 +123,7 @@ export function AddProperty() {
                 type="date"
                 className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
                 onChange={(e) => setLeaseEnd(e.target.value)}
+                value={leaseEnd}
               />
             </div>
           </div>
@@ -129,6 +134,7 @@ export function AddProperty() {
               type="date"
               className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
               onChange={(e) => setInspectionDate(e.target.value)}
+              value={inspectionDate}
             />
           </div>
 
