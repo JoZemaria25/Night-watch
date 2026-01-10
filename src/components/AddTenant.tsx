@@ -34,30 +34,46 @@ export function AddTenant() {
     const [phone, setPhone] = useState("");
     const [propertyId, setPropertyId] = useState("");
     const [properties, setProperties] = useState<Property[]>([]);
+
+    // Loading & Org ID State
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [organizationId, setOrganizationId] = useState<string | null>(null);
+    const [fetchError, setFetchError] = useState(false);
 
     useEffect(() => {
         async function init() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('organization_id')
-                    .eq('id', user.id)
-                    .single();
+            setLoading(true);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('organization_id')
+                        .eq('id', user.id)
+                        .single();
 
-                if (profile?.organization_id) {
-                    setOrganizationId(profile.organization_id);
+                    if (profile?.organization_id) {
+                        setOrganizationId(profile.organization_id);
 
-                    // Fetch properties for this organization
-                    const { data } = await supabase
-                        .from("properties")
-                        .select("id, address")
-                        .eq('organization_id', profile.organization_id);
+                        // Fetch properties for this organization
+                        const { data } = await supabase
+                            .from("properties")
+                            .select("id, address")
+                            .eq('organization_id', profile.organization_id);
 
-                    if (data) setProperties(data);
+                        if (data) setProperties(data);
+                    } else {
+                        setFetchError(true);
+                    }
+                } else {
+                    setFetchError(true);
                 }
+            } catch (err) {
+                console.error("Error fetching dependencies:", err);
+                setFetchError(true);
+            } finally {
+                setLoading(false);
             }
         }
         init();
@@ -101,56 +117,69 @@ export function AddTenant() {
                         Register a new tenant and assign them to a property.
                     </SheetDescription>
                 </SheetHeader>
-                <div className="grid gap-6 py-6">
-                    <div className="grid gap-2">
-                        <Label>Full Name</Label>
-                        <Input
-                            className="bg-zinc-900 border-zinc-800 focus:ring-indigo-500"
-                            placeholder="e.g. John Doe"
-                            onChange={(e) => setFullName(e.target.value)}
-                        />
+
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-zinc-400">
+                        <p>Loading configuration...</p>
                     </div>
-                    <div className="grid gap-2">
-                        <Label>Email Address</Label>
-                        <Input
-                            className="bg-zinc-900 border-zinc-800"
-                            placeholder="e.g. john@example.com"
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
+                ) : !organizationId || fetchError ? (
+                    <div className="mt-4 p-4 bg-red-900/50 border border-red-800 text-red-200 rounded text-sm">
+                        <strong>CRITICAL ERROR:</strong> No Organization ID found. Please refresh the page or contact support.
                     </div>
-                    <div className="grid gap-2">
-                        <Label>Phone Number</Label>
-                        <Input
-                            className="bg-zinc-900 border-zinc-800"
-                            placeholder="e.g. +1 234 567 890"
-                            onChange={(e) => setPhone(e.target.value)}
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label>Assign Unit</Label>
-                        <Select onValueChange={setPropertyId}>
-                            <SelectTrigger className="bg-zinc-900 border-zinc-800">
-                                <SelectValue placeholder="Select a property" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                {properties.map((prop) => (
-                                    <SelectItem key={prop.id} value={prop.id}>
-                                        {prop.address}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                <SheetFooter>
-                    <Button
-                        onClick={handleSave}
-                        disabled={saving || !organizationId}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700"
-                    >
-                        {saving ? "Processing..." : "Register Tenant"}
-                    </Button>
-                </SheetFooter>
+                ) : (
+                    <>
+                        <div className="grid gap-6 py-6">
+                            <div className="grid gap-2">
+                                <Label>Full Name</Label>
+                                <Input
+                                    className="bg-zinc-900 border-zinc-800 focus:ring-indigo-500"
+                                    placeholder="e.g. John Doe"
+                                    onChange={(e) => setFullName(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Email Address</Label>
+                                <Input
+                                    className="bg-zinc-900 border-zinc-800"
+                                    placeholder="e.g. john@example.com"
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Phone Number</Label>
+                                <Input
+                                    className="bg-zinc-900 border-zinc-800"
+                                    placeholder="e.g. +1 234 567 890"
+                                    onChange={(e) => setPhone(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Assign Unit</Label>
+                                <Select onValueChange={setPropertyId}>
+                                    <SelectTrigger className="bg-zinc-900 border-zinc-800">
+                                        <SelectValue placeholder="Select a property" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                        {properties.map((prop) => (
+                                            <SelectItem key={prop.id} value={prop.id}>
+                                                {prop.address}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <SheetFooter>
+                            <Button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700"
+                            >
+                                {saving ? "Processing..." : "Register Tenant"}
+                            </Button>
+                        </SheetFooter>
+                    </>
+                )}
             </SheetContent>
         </Sheet>
     );
