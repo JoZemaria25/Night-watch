@@ -24,49 +24,80 @@ export function AddProperty() {
   const [inspectionDate, setInspectionDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState(false);
 
   // Fetch Organization ID on mount
   useEffect(() => {
     async function fetchOrgId() {
+      console.log("DEBUG: Component mounted, fetching user...");
       const { data: { user } } = await supabase.auth.getUser();
+
       if (user) {
-        const { data: profile } = await supabase
+        console.log("DEBUG: User found:", user.id);
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('organization_id')
           .eq('id', user.id)
           .single();
 
-        if (profile) {
-          setOrganizationId(profile.organization_id);
+        if (error) {
+          console.error("DEBUG: Error fetching profile:", error);
+          setFetchError(true);
         }
+
+        if (profile) {
+          console.log("DEBUG: Found Org ID:", profile.organization_id);
+          setOrganizationId(profile.organization_id);
+        } else {
+          console.warn("DEBUG: No profile found for user.");
+          setFetchError(true);
+        }
+      } else {
+        console.error("DEBUG: No authenticated user found.");
+        setFetchError(true);
       }
     }
     fetchOrgId();
   }, []);
 
   async function handleSave() {
+    alert("Button Clicked! Starting submission...");
+
     if (!organizationId) {
-      alert("Error: Could not determine your organization. Please try reloading.");
+      alert("CRITICAL ERROR: No Organization ID found.");
+      return;
+    }
+
+    if (!address || !city) {
+      alert("Validation Failed: Missing required fields (Address or City)");
       return;
     }
 
     setSaving(true);
-    // Note: Assuming 'next_inspection_date' based on previous schema context. 
-    // If the schema strictly requires 'next_inspection', this key should be updated.
-    const { error } = await supabase.from('properties').insert({
-      address,
-      city,
-      lease_end: leaseEnd,
+
+    // Explicit debug log of payload
+    const payload = {
+      address: address,
+      city: city,
       rent_due_day: rentDay ? parseInt(rentDay) : null,
-      next_inspection_date: inspectionDate,
+      lease_end: leaseEnd || null,
+      next_inspection: inspectionDate || null, // Updated key to 'next_inspection' per instruction
       organization_id: organizationId
-    });
+    };
+
+    console.log("DEBUG: Attempting INSERT with:", payload);
+
+    const { error } = await supabase.from('properties').insert(payload);
+
     setSaving(false);
 
-    if (!error) {
-      window.location.reload(); // Quick refresh to show data
+    if (error) {
+      console.error("DEBUG: Insert Error:", error);
+      alert("Database Error: " + error.message);
     } else {
-      alert("Error saving property: " + error.message);
+      console.log("DEBUG: Insert Success");
+      alert("Success! Asset Created.");
+      window.location.reload();
     }
   }
 
@@ -84,9 +115,18 @@ export function AddProperty() {
             Add a new property to the Night Watch monitoring system.
           </SheetDescription>
         </SheetHeader>
+
+        {/* Visible Error Message if Org ID missing */}
+        {fetchError && (
+          <div className="mt-4 p-4 bg-red-900/50 border border-red-800 text-red-200 rounded text-sm">
+            <strong>CRITICAL ERROR:</strong> No Organization ID found. Please refresh the page or contact support.
+            Without this, you cannot add assets.
+          </div>
+        )}
+
         <div className="grid gap-6 py-6">
           <div className="grid gap-2">
-            <Label>Property Address</Label>
+            <Label>Property Address *</Label>
             <Input
               className="bg-zinc-900 border-zinc-800 focus:ring-indigo-500"
               placeholder="e.g. 12 Lekki Phase 1"
@@ -95,7 +135,7 @@ export function AddProperty() {
             />
           </div>
           <div className="grid gap-2">
-            <Label>City / Region</Label>
+            <Label>City / Region *</Label>
             <Input
               className="bg-zinc-900 border-zinc-800"
               placeholder="e.g. Lagos"
@@ -112,7 +152,7 @@ export function AddProperty() {
                 min={1}
                 max={31}
                 className="bg-zinc-900 border-zinc-800"
-                placeholder="e.g. 25"
+                placeholder="25"
                 onChange={(e) => setRentDay(e.target.value)}
                 value={rentDay}
               />
@@ -142,7 +182,7 @@ export function AddProperty() {
         <SheetFooter>
           <Button
             onClick={handleSave}
-            disabled={saving || !organizationId}
+            disabled={saving || fetchError}
             className="w-full bg-indigo-600 hover:bg-indigo-700"
           >
             {saving ? "Encrypting..." : "Initialize Asset"}
