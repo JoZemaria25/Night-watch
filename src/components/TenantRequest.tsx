@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wrench, AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { Wrench, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type Property = {
     id: string;
@@ -30,22 +31,57 @@ type Property = {
 };
 
 export function TenantRequest() {
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const [issueType, setIssueType] = useState<"Repair" | "Inspection">("Repair");
     const [propertyId, setPropertyId] = useState("");
     const [description, setDescription] = useState("");
     const [properties, setProperties] = useState<Property[]>([]);
+
+    // Safety & Loading State
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [organizationId, setOrganizationId] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchProperties() {
-            const { data } = await supabase.from("properties").select("id, address");
-            if (data) setProperties(data);
+        async function init() {
+            setLoading(true);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('organization_id')
+                        .eq('id', user.id)
+                        .maybeSingle();
+
+                    if (profile?.organization_id) {
+                        setOrganizationId(profile.organization_id);
+
+                        // Only fetch properties if we have a valid Org ID
+                        const { data } = await supabase
+                            .from("properties")
+                            .select("id, address")
+                            .eq('organization_id', profile.organization_id);
+
+                        if (data) setProperties(data);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load request dependencies:", error);
+            } finally {
+                setLoading(false);
+            }
         }
-        fetchProperties();
+        init();
     }, []);
 
     async function handleSubmit() {
         if (!propertyId || !description) return alert("Please fill in all fields.");
+        if (!organizationId) return alert("System Error: No Organization Linked.");
 
         setSaving(true);
         const { error } = await supabase.from("maintenance_requests").insert({
@@ -53,6 +89,7 @@ export function TenantRequest() {
             description,
             status: "Open",
             property_id: propertyId,
+            organization_id: organizationId // Explicitly link to org
         });
         setSaving(false);
 
@@ -63,11 +100,27 @@ export function TenantRequest() {
         }
     }
 
+    // Guard: If still loading, show a loading button state
+    // Guard: If no Organization ID, disable the flow
+    const isDisabled = loading || !organizationId;
+
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <Button variant="outline" className="bg-zinc-950 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-900">
-                    <Wrench className="mr-2 h-4 w-4" /> Report Issue
+                <Button
+                    variant="outline"
+                    disabled={isDisabled}
+                    className={cn(
+                        "bg-zinc-950 text-zinc-400 border-zinc-800 hover:bg-zinc-900 border",
+                        isDisabled && "opacity-50 cursor-not-allowed"
+                    )}
+                >
+                    {loading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Wrench className="mr-2 h-4 w-4" />
+                    )}
+                    {loading ? "Syncing..." : "Report Issue"}
                 </Button>
             </SheetTrigger>
             <SheetContent className="bg-zinc-950 border-l-zinc-800 text-white">
@@ -77,7 +130,16 @@ export function TenantRequest() {
                         Submit a new request for repairs or inspection.
                     </SheetDescription>
                 </SheetHeader>
+
                 <div className="grid gap-6 py-6">
+
+                    {/* Status Indicator */}
+                    {!loading && !organizationId && (
+                        <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-md flex items-center gap-3 text-red-400 text-sm">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>Finish Onboarding to report issues.</span>
+                        </div>
+                    )}
 
                     {/* Issue Type Toggle */}
                     <div className="grid gap-2">
@@ -85,14 +147,24 @@ export function TenantRequest() {
                         <div className="grid grid-cols-2 gap-2">
                             <Button
                                 variant={issueType === "Repair" ? "default" : "outline"}
-                                className={issueType === "Repair" ? "bg-amber-600 hover:bg-amber-700" : "border-zinc-800 text-zinc-400"}
+                                className={cn(
+                                    "transition-all",
+                                    issueType === "Repair"
+                                        ? "bg-amber-600 hover:bg-amber-700 text-white border-transparent"
+                                        : "bg-transparent border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                                )}
                                 onClick={() => setIssueType("Repair")}
                             >
                                 Repair
                             </Button>
                             <Button
                                 variant={issueType === "Inspection" ? "default" : "outline"}
-                                className={issueType === "Inspection" ? "bg-indigo-600 hover:bg-indigo-700" : "border-zinc-800 text-zinc-400"}
+                                className={cn(
+                                    "transition-all",
+                                    issueType === "Inspection"
+                                        ? "bg-indigo-600 hover:bg-indigo-700 text-white border-transparent"
+                                        : "bg-transparent border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                                )}
                                 onClick={() => setIssueType("Inspection")}
                             >
                                 Inspection
@@ -103,9 +175,11 @@ export function TenantRequest() {
                     {/* Property Select */}
                     <div className="grid gap-2">
                         <Label>Affected Unit</Label>
-                        <Select onValueChange={setPropertyId}>
+                        <Select onValueChange={setPropertyId} disabled={isDisabled}>
                             <SelectTrigger className="bg-zinc-900 border-zinc-800">
-                                <SelectValue placeholder="Select your unit" />
+                                <SelectValue placeholder={
+                                    properties.length === 0 ? "No properties available" : "Select your unit"
+                                } />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                                 {properties.map((prop) => (
@@ -121,7 +195,7 @@ export function TenantRequest() {
                     <div className="grid gap-2">
                         <Label>Description</Label>
                         <Textarea
-                            className="bg-zinc-900 border-zinc-800 min-h-[100px]"
+                            className="bg-zinc-900 border-zinc-800 min-h-[100px] focus:ring-indigo-500/50"
                             placeholder="Please describe the issue in detail..."
                             onChange={(e) => setDescription(e.target.value)}
                         />
@@ -131,10 +205,15 @@ export function TenantRequest() {
                 <SheetFooter>
                     <Button
                         onClick={handleSubmit}
-                        disabled={saving}
+                        disabled={saving || isDisabled}
                         className="w-full bg-white text-black hover:bg-zinc-200"
                     >
-                        {saving ? "Submitting..." : "Submit Request"}
+                        {saving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Submitting...
+                            </>
+                        ) : "Submit Request"}
                     </Button>
                 </SheetFooter>
             </SheetContent>
