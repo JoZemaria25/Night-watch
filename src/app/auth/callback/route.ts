@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
                         return cookieStore.get(name)?.value;
                     },
                     set(name: string, value: string, options: CookieOptions) {
-                        // This writes the cookie to the Response object we created above
                         response.cookies.set({
                             name,
                             value,
@@ -27,7 +26,6 @@ export async function GET(request: NextRequest) {
                         });
                     },
                     remove(name: string, options: CookieOptions) {
-                        // This removes the cookie from the Response object
                         response.cookies.delete({
                             name,
                             ...options,
@@ -40,10 +38,28 @@ export async function GET(request: NextRequest) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
+            // SUCCESS: Session established.
+            // OPTIONAL: Check or Create Profile to ensure they are "Homeless" but valid
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (user) {
+                // Idempotent Profile Creation: Try to create, ignore if exists
+                // This handles the "Profile already exists" case silently
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .upsert({ id: user.id, email: user.email }, { onConflict: 'id', ignoreDuplicates: true });
+
+                if (profileError) {
+                    console.error("Callback Profile Warning:", profileError);
+                }
+            }
+
             return response;
+        } else {
+            console.error("Auth Exchange Error:", error);
         }
     }
 
-    // Return the user to an error page with instructions
+    // Only redirect to error page if we truly failed to get a session
     return NextResponse.redirect(`${origin}/auth/auth-code-error`);
 }
