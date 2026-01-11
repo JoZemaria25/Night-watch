@@ -16,6 +16,8 @@ import { PortfolioPulse } from "@/components/PortfolioPulse";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { supabase } from "@/lib/supabase";
 
+import { CreateOrganizationForm } from "@/components/dashboard/create-organization-form";
+
 export default function Home() {
   const [running, setRunning] = useState(false);
   const [policies, setPolicies] = useState<PolicyRow[]>([
@@ -80,19 +82,11 @@ export default function Home() {
     );
   }
 
-  // If no organization is found and we are not showing onboarding (e.g. error state), show empty state
-  // But usually OnboardingModal covers this. We'll render the dashboard behind it but maybe blurred or empty?
-  // User asked: "If organization is null, the UI should show an 'Empty State' or 'Welcome' screen, NOT an error."
-
-  if (!organization && !showOnboarding) {
-    // Fallback for weird state or just plain empty
+  // If no organization is found, show the Create Organization Form
+  if (!organization && !loading) {
     return (
-      <main className="min-h-screen relative flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Welcome into the Night</h1>
-          <p className="text-zinc-400">Initializing your command center...</p>
-          <Button onClick={() => window.location.reload()} className="mt-4" variant="outline">Retry</Button>
-        </div>
+      <main className="min-h-screen relative flex items-center justify-center p-4">
+        <CreateOrganizationForm />
       </main>
     )
   }
