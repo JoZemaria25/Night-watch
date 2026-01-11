@@ -23,22 +23,40 @@ export default function Home() {
   ]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [organization, setOrganization] = useState<any | null>(null);
 
   useEffect(() => {
     async function checkUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('organization_id')
-          .eq('id', user.id)
-          .single();
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (profile && !profile.organization_id) {
-          setShowOnboarding(true);
+        if (user) {
+          // 1. Safe Profile Fetch
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('organization_id')
+            .eq('id', user.id)
+            .maybeSingle(); // Use maybeSingle to prevent 0-row errors
+
+          if (profile?.organization_id) {
+            // 2. Conditional Organization Fetch
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('id', profile.organization_id)
+              .single();
+
+            setOrganization(orgData);
+          } else {
+            // 3. Handle Null Organization (New User)
+            setShowOnboarding(true);
+          }
         }
+      } catch (error) {
+        console.error("Dashboard Load Error:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     checkUser();
   }, []);
@@ -54,13 +72,36 @@ export default function Home() {
     }
   };
 
-  if (loading) return null; // Or a loading spinner
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-zinc-950 text-indigo-500">
+        <Play className="h-6 w-6 animate-pulse" />
+      </div>
+    );
+  }
+
+  // If no organization is found and we are not showing onboarding (e.g. error state), show empty state
+  // But usually OnboardingModal covers this. We'll render the dashboard behind it but maybe blurred or empty?
+  // User asked: "If organization is null, the UI should show an 'Empty State' or 'Welcome' screen, NOT an error."
+
+  if (!organization && !showOnboarding) {
+    // Fallback for weird state or just plain empty
+    return (
+      <main className="min-h-screen relative flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">Welcome into the Night</h1>
+          <p className="text-zinc-400">Initializing your command center...</p>
+          <Button onClick={() => window.location.reload()} className="mt-4" variant="outline">Retry</Button>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen relative">
       <OnboardingModal isOpen={showOnboarding} />
 
-      <div className="max-w-6xl mx-auto py-12 px-6 space-y-12">
+      <div className={`max-w-6xl mx-auto py-12 px-6 space-y-12 transition-opacity duration-500 ${showOnboarding ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -70,7 +111,7 @@ export default function Home() {
               <span className="text-xs font-bold tracking-widest uppercase">Compliance Engine v1.0</span>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight text-white">
-              The Night Watch
+              {organization?.name || "The Night Watch"}
             </h1>
             <p className="text-zinc-400 max-w-lg text-lg">
               Automated risk mitigation for your property portfolio.
