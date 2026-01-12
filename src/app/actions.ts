@@ -38,30 +38,14 @@ export async function createOrganizationAction(prevState: any, formData: FormDat
         return { success: false, message: "Unauthorized" };
     }
 
-    // 2. Create Organization
-    const { data: orgData, error: orgError } = await supabase
-        .from("organizations")
-        .insert({ name: name, created_at: new Date().toISOString() })
-        .select()
-        .single();
+    // 2. Create Organization via RPC (Handles RLS and Admin Rules)
+    const { error: rpcError } = await supabase.rpc('create_organization_for_me', {
+        org_name: name
+    });
 
-    if (orgError) {
-        console.error("Create Org Error:", orgError);
-        return { success: false, message: "Failed to create organization. It usually means an error with database permissions or constraints." };
-    }
-
-    // 3. Link User to Organization and set as Admin
-    const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-            organization_id: orgData.id,
-            role: 'admin' // Granting full command
-        })
-        .eq("id", user.id);
-
-    if (profileError) {
-        console.error("Link Profile Error:", profileError);
-        return { success: false, message: "Organization created but failed to link profile." };
+    if (rpcError) {
+        console.error("RPC Error:", rpcError);
+        return { success: false, message: "System failed to initialize sector. " + rpcError.message };
     }
 
     console.log(`Organization '${name}' created by user ${user.id}`);
