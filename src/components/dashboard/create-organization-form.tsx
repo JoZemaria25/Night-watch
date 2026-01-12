@@ -1,6 +1,4 @@
-"use client";
-
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, Building2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,19 +12,25 @@ const initialState = {
     message: "",
 };
 
-function SubmitButton() {
+function SubmitButton({ isRedirecting }: { isRedirecting: boolean }) {
     const { pending } = useFormStatus();
+    const isDisabled = pending || isRedirecting;
 
     return (
         <Button
             type="submit"
-            disabled={pending}
+            disabled={isDisabled}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
         >
             {pending ? (
                 <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Initializing Sector...
+                </>
+            ) : isRedirecting ? (
+                <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Accessing Command Deck...
                 </>
             ) : (
                 <>
@@ -41,9 +45,17 @@ function SubmitButton() {
 export function CreateOrganizationForm() {
     // using hook for server action state
     const [state, formAction] = useActionState(createOrganizationAction, initialState);
+    const [isRedirecting, setIsRedirecting] = useState(false);
 
-    // Local state just for visual feedback logic if needed or just rely on server state
-    // We can rely on server state.
+    useEffect(() => {
+        if (state.success) {
+            setIsRedirecting(true);
+            const timer = setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 800);
+            return () => clearTimeout(timer);
+        }
+    }, [state.success]);
 
     return (
         <div className="w-full max-w-md mx-auto p-1">
@@ -90,7 +102,7 @@ export function CreateOrganizationForm() {
                             </div>
                         )}
 
-                        <SubmitButton />
+                        <SubmitButton isRedirecting={isRedirecting} />
                     </form>
                 </div>
             </div>
