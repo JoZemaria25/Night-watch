@@ -16,7 +16,7 @@ import { PortfolioPulse } from "@/components/PortfolioPulse";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { supabase } from "@/lib/supabase";
 
-import { CreateOrganizationForm } from "@/components/dashboard/create-organization-form";
+
 
 export default function Home() {
   const [running, setRunning] = useState(false);
@@ -80,15 +80,6 @@ export default function Home() {
         <Play className="h-6 w-6 animate-pulse" />
       </div>
     );
-  }
-
-  // If no organization is found, show the Create Organization Form
-  if (!organization && !loading) {
-    return (
-      <main className="min-h-screen relative flex items-center justify-center p-4">
-        <CreateOrganizationForm />
-      </main>
-    )
   }
 
   return (
