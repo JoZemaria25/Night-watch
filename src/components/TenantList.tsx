@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Trash, User } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { Trash, User, Users } from "lucide-react";
+import { createBrowserClient } from "@supabase/ssr";
 import { EditTenant } from "./EditTenant";
 
 type Tenant = {
@@ -20,39 +20,71 @@ type Tenant = {
 export function TenantList({ limit }: { limit?: number }) {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [loading, setLoading] = useState(true);
+    const [organizationId, setOrganizationId] = useState<string | null>(null);
+
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
     useEffect(() => {
-        fetchTenants();
-    }, [limit]);
+        async function init() {
+            setLoading(true);
+            try {
+                // 1. Get current user
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    console.warn("[TenantList] No authenticated user.");
+                    setLoading(false);
+                    return;
+                }
 
-    async function fetchTenants() {
-        try {
-            let query = supabase
-                .from("tenants")
-                .select(`
-          *,
-          properties (
-            address
-          )
-        `)
-                .order("full_name");
+                // 2. Get user's organization_id from profiles
+                const { data: profile, error: profileError } = await supabase
+                    .from("profiles")
+                    .select("organization_id")
+                    .eq("id", user.id)
+                    .maybeSingle();
 
-            if (limit) {
-                query = query.limit(limit);
+                if (profileError || !profile?.organization_id) {
+                    console.warn("[TenantList] No organization linked to user.");
+                    setLoading(false);
+                    return;
+                }
+
+                setOrganizationId(profile.organization_id);
+
+                // 3. Fetch ONLY tenants belonging to user's organization
+                let query = supabase
+                    .from("tenants")
+                    .select(`
+                        *,
+                        properties (
+                            address
+                        )
+                    `)
+                    .eq("organization_id", profile.organization_id)
+                    .order("full_name");
+
+                if (limit) {
+                    query = query.limit(limit);
+                }
+
+                const { data, error } = await query;
+
+                if (error) throw error;
+                if (data) {
+                    setTenants(data as any);
+                }
+            } catch (err) {
+                console.error("[TenantList] Error fetching tenants:", err);
+            } finally {
+                setLoading(false);
             }
-
-            const { data, error } = await query;
-
-            if (error) throw error;
-            if (data) {
-                setTenants(data as any);
-            }
-        } catch (err) {
-            console.error("Error fetching tenants:", err);
-        } finally {
-            setLoading(false);
         }
-    }
+
+        init();
+    }, [limit]);
 
     async function handleDelete(id: string) {
         if (!window.confirm("Are you sure you want to remove this tenant?")) return;
@@ -66,6 +98,27 @@ export function TenantList({ limit }: { limit?: number }) {
     }
 
     if (loading) return <div className="text-zinc-500 text-sm animate-pulse">Loading Tenants...</div>;
+
+    // SECURITY: If no organization, show empty state - NEVER show other users' data
+    if (!organizationId) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Users className="h-12 w-12 text-zinc-700 mb-4" />
+                <h3 className="text-lg font-medium text-zinc-400">No Tenants Yet</h3>
+                <p className="text-sm text-zinc-600 mt-1">Complete onboarding to add tenants.</p>
+            </div>
+        );
+    }
+
+    if (tenants.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Users className="h-12 w-12 text-zinc-700 mb-4" />
+                <h3 className="text-lg font-medium text-zinc-400">No Tenants Found</h3>
+                <p className="text-sm text-zinc-600 mt-1">Add tenants to begin managing your residents.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

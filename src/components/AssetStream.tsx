@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Ghost, MoreHorizontal, Building2, Trash } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@supabase/ssr";
 import { EditProperty } from "./EditProperty";
 
 type Property = {
@@ -13,57 +13,111 @@ type Property = {
   lease_end?: string;
   rent_due_day?: number;
   next_inspection_date?: string;
-  image_url?: string; // New field for visuals
+  image_url?: string;
 };
 
 export function AssetStream({ limit }: { limit?: number }) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   useEffect(() => {
-    fetchProperties();
-  }, [limit]);
+    async function init() {
+      setLoading(true);
+      try {
+        // 1. Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.warn("[AssetStream] No authenticated user.");
+          setLoading(false);
+          return;
+        }
 
-  async function fetchProperties() {
-    try {
-      let query = supabase.from('properties').select('*').order('address');
+        // 2. Get user's organization_id from profiles
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("organization_id")
+          .eq("id", user.id)
+          .maybeSingle();
 
-      if (limit) {
-        query = query.limit(limit);
+        if (profileError || !profile?.organization_id) {
+          console.warn("[AssetStream] No organization linked to user.");
+          setLoading(false);
+          return;
+        }
+
+        setOrganizationId(profile.organization_id);
+
+        // 3. Fetch ONLY properties belonging to user's organization
+        let query = supabase
+          .from("properties")
+          .select("*")
+          .eq("organization_id", profile.organization_id)
+          .order("address");
+
+        if (limit) {
+          query = query.limit(limit);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+        if (data) {
+          const enhancedData = data.map((prop: any, index: number) => ({
+            ...prop,
+            leaseEnd: prop.lease_end || "No Date Set",
+            image_url: `https://images.unsplash.com/photo-${index % 2 === 0 ? '1600585154340-be6161a56a0c' : '1600607687939-ce8a6c25118c'}?w=800&auto=format&fit=crop&q=60`
+          }));
+          setProperties(enhancedData);
+        }
+      } catch (err) {
+        console.error("[AssetStream] Connection Error:", err);
+      } finally {
+        setLoading(false);
       }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      if (data) {
-        const enhancedData = data.map((prop: any, index: number) => ({
-          ...prop,
-          leaseEnd: prop.lease_end || "No Date Set",
-          // Mocking high-end architecture photos for the "Wow" factor
-          image_url: `https://images.unsplash.com/photo-${index % 2 === 0 ? '1600585154340-be6161a56a0c' : '1600607687939-ce8a6c25118c'}?w=800&auto=format&fit=crop&q=60`
-        }));
-        setProperties(enhancedData);
-      }
-    } catch (err) {
-      console.error("Connection Error:", err);
-    } finally {
-      setLoading(false);
     }
-  }
+
+    init();
+  }, [limit]);
 
   async function handleDelete(id: string) {
     if (!window.confirm("Are you sure you want to delete this asset? This action cannot be undone.")) return;
 
-    const { error } = await supabase.from('properties').delete().eq('id', id);
+    const { error } = await supabase.from("properties").delete().eq("id", id);
     if (error) {
       alert("Error deleting property: " + error.message);
     } else {
-      // Optimistic update
       setProperties(prev => prev.filter(p => p.id !== id));
     }
   }
 
   if (loading) return <div className="text-zinc-500 text-sm animate-pulse">Syncing Assets...</div>;
+
+  // SECURITY: If no organization, show empty state - NEVER show other users' data
+  if (!organizationId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Ghost className="h-12 w-12 text-zinc-700 mb-4" />
+        <h3 className="text-lg font-medium text-zinc-400">No Assets Yet</h3>
+        <p className="text-sm text-zinc-600 mt-1">Add your first property to get started.</p>
+      </div>
+    );
+  }
+
+  if (properties.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Building2 className="h-12 w-12 text-zinc-700 mb-4" />
+        <h3 className="text-lg font-medium text-zinc-400">No Properties Found</h3>
+        <p className="text-sm text-zinc-600 mt-1">Add assets to begin monitoring your portfolio.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -92,7 +146,7 @@ export function AssetStream({ limit }: { limit?: number }) {
 
             <div className="flex items-center p-4 gap-6">
 
-              {/* IMAGE (The Girlfriend Test Factor) */}
+              {/* IMAGE */}
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-700/50">
                 <img
                   src={prop.image_url}

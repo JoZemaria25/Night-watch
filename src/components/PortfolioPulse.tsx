@@ -11,7 +11,7 @@ import {
     YAxis,
 } from "recharts";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@supabase/ssr";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -32,14 +32,42 @@ export function PortfolioPulse() {
     const [totalEvents, setTotalEvents] = useState(0);
     const [loading, setLoading] = useState(true);
 
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     useEffect(() => {
         async function fetchData() {
             try {
+                // 1. Get current user's organization
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    console.warn("[PortfolioPulse] No authenticated user.");
+                    setLoading(false);
+                    return;
+                }
+
+                const { data: profile, error: profileError } = await supabase
+                    .from("profiles")
+                    .select("organization_id")
+                    .eq("id", user.id)
+                    .maybeSingle();
+
+                if (profileError || !profile?.organization_id) {
+                    console.warn("[PortfolioPulse] No organization linked to user.");
+                    // Show empty chart with 0 values
+                    const emptyDays = generateEmptyDays();
+                    setData(emptyDays);
+                    setLoading(false);
+                    return;
+                }
+
                 const today = new Date();
                 const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(today.getDate() - 6); // 7 days including today
+                sevenDaysAgo.setDate(today.getDate() - 6);
 
-                // 1. Generate the last 7 days array
+                // 2. Generate the last 7 days array
                 const days: { date: string; day: string; value: number }[] = [];
                 for (let i = 6; i >= 0; i--) {
                     const d = new Date();
@@ -51,21 +79,21 @@ export function PortfolioPulse() {
                     });
                 }
 
-                // 2. Fetch data from Supabase
+                // 3. Fetch ONLY logs belonging to user's organization
                 const { data: logs, error } = await supabase
                     .from("asset_log")
                     .select("created_at")
+                    .eq("organization_id", profile.organization_id)
                     .gte("created_at", sevenDaysAgo.toISOString());
 
                 if (error) {
-                    console.error("Error fetching logs:", error);
-                    // Fallback to empty data on error, but keep the days structure
+                    console.error("[PortfolioPulse] Error fetching logs:", error);
                     setData(days.map(d => ({ day: d.day, value: 0 })));
                     setLoading(false);
                     return;
                 }
 
-                // 3. Aggregate data
+                // 4. Aggregate data
                 let total = 0;
                 if (logs) {
                     logs.forEach((log) => {
@@ -81,7 +109,7 @@ export function PortfolioPulse() {
                 setData(days.map((d) => ({ day: d.day, value: d.value })));
                 setTotalEvents(total);
             } catch (err) {
-                console.error("Unexpected error:", err);
+                console.error("[PortfolioPulse] Unexpected error:", err);
             } finally {
                 setLoading(false);
             }
@@ -89,6 +117,21 @@ export function PortfolioPulse() {
 
         fetchData();
     }, []);
+
+    // Helper to generate empty days for chart structure
+    function generateEmptyDays(): { day: string; value: number }[] {
+        const days: { day: string; value: number }[] = [];
+        const today = new Date();
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            days.push({
+                day: d.toLocaleDateString("en-US", { weekday: "short" }),
+                value: 0,
+            });
+        }
+        return days;
+    }
 
     return (
         <div className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm p-6">
