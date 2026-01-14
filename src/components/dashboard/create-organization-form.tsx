@@ -1,3 +1,5 @@
+"use client";
+
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, Building2, ArrowRight } from "lucide-react";
