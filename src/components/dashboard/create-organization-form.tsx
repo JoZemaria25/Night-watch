@@ -51,7 +51,7 @@ export function CreateOrganizationForm() {
         if (state.success) {
             setIsRedirecting(true);
             const timer = setTimeout(() => {
-                window.location.href = '/dashboard';
+                window.location.href = '/';
             }, 800);
             return () => clearTimeout(timer);
         }

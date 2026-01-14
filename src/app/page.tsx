@@ -13,17 +13,13 @@ import { Play, ShieldCheck } from "lucide-react";
 import { runNightWatch, PolicyRow } from "@/lib/nightWatchEngine";
 import { useState, useEffect } from "react";
 import { PortfolioPulse } from "@/components/PortfolioPulse";
-import { OnboardingModal } from "@/components/OnboardingModal";
 import { supabase } from "@/lib/supabase";
-
-
 
 export default function Home() {
   const [running, setRunning] = useState(false);
   const [policies, setPolicies] = useState<PolicyRow[]>([
     { id: 1, scope: "global", metric: "lease_end", operator: "<", value: "90", recipient: "manager" }
   ]);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<any | null>(null);
 
@@ -38,10 +34,10 @@ export default function Home() {
             .from('profiles')
             .select('organization_id')
             .eq('id', user.id)
-            .maybeSingle(); // Use maybeSingle to prevent 0-row errors
+            .maybeSingle();
 
           if (profile?.organization_id) {
-            // 2. Conditional Organization Fetch
+            // 2. Fetch Organization Data for Display
             const { data: orgData } = await supabase
               .from('organizations')
               .select('*')
@@ -49,9 +45,6 @@ export default function Home() {
               .single();
 
             setOrganization(orgData);
-          } else {
-            // 3. Handle Null Organization (New User)
-            setShowOnboarding(true);
           }
         }
       } catch (error) {
@@ -70,7 +63,6 @@ export default function Home() {
     setRunning(false);
     if (result.success) {
       alert(`Night Watch Complete!\n\n${result.logs.join("\n")}`);
-      // window.location.reload(); // Removed reload to keep state visible
     }
   };
 
@@ -84,9 +76,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen relative">
-      <OnboardingModal isOpen={showOnboarding} />
-
-      <div className={`max-w-6xl mx-auto py-12 px-6 space-y-12 transition-opacity duration-500 ${showOnboarding ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+      <div className="max-w-6xl mx-auto py-12 px-6 space-y-12">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -150,4 +140,3 @@ export default function Home() {
     </main>
   );
 }
-
