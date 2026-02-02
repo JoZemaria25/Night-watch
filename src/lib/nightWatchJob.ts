@@ -28,7 +28,7 @@ export async function runNightWatchJob() {
         if (propError) throw propError;
         if (!properties || properties.length === 0) {
             logs.push('ℹ️ No expiring leases found.');
-            return { success: true, logs, processed: 0 };
+            return { success: true as const, logs, processed: 0 };
         }
 
         logs.push(`Found ${properties.length} properties with expiring leases.`);
@@ -105,10 +105,10 @@ export async function runNightWatchJob() {
         }
 
         logs.push('✅ Job Complete.');
-        return { success: true, logs, processed: processedCount };
+        return { success: true as const, logs, processed: processedCount };
 
     } catch (error: any) {
         console.error('Night Watch Job Failed:', error);
-        return { success: false, error: error.message, logs };
+        return { success: false as const, error: error.message, logs };
     }
 }

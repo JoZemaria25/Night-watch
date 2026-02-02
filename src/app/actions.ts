@@ -77,7 +77,7 @@ export async function triggerNightWatchManually() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-        return { success: false, error: "Unauthorized" };
+        return { success: false as const, error: "Unauthorized" };
     }
 
     console.log(`User ${user.id} manually triggered Night Watch.`);

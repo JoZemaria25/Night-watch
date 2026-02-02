@@ -7,7 +7,7 @@ import { Wrench, Play, X } from "lucide-react";
 import { PortfolioPulse } from "../components/PortfolioPulse";
 import { AssetStream } from "../components/AssetStream";
 import { TenantList } from "../components/TenantList";
-import { TenantRequest } from "../components/TenantRequest";
+import { TenantRequest } from "../components/dashboard/TenantRequest";
 import { PolicyBuilder } from "../components/PolicyBuilder";
 import { AddProperty } from "../components/AddProperty";
 import { AddTenant } from "../components/AddTenant";
