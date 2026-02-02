@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { runNightWatchJob } from "@/lib/nightWatchJob";
 
 export async function createOrganizationAction(prevState: any, formData: FormData) {
     const name = formData.get("name") as string;
@@ -53,4 +54,35 @@ export async function createOrganizationAction(prevState: any, formData: FormDat
     // 4. Revalidate and complete
     revalidatePath("/");
     return { success: true, message: "Organization initialized." };
+}
+
+export async function triggerNightWatchManually() {
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                get(name: string) {
+                    return cookieStore.get(name)?.value;
+                },
+                set(name: string, value: string, options: CookieOptions) {
+                },
+                remove(name: string, options: CookieOptions) {
+                },
+            },
+        }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { success: false, error: "Unauthorized" };
+    }
+
+    console.log(`User ${user.id} manually triggered Night Watch.`);
+    const result = await runNightWatchJob();
+
+    revalidatePath("/");
+    return result;
 }

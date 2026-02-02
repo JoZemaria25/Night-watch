@@ -12,6 +12,7 @@ import { PolicyBuilder } from "../components/PolicyBuilder";
 import { AddProperty } from "../components/AddProperty";
 import { AddTenant } from "../components/AddTenant";
 import { PolicyRow } from "../lib/nightWatchEngine";
+import { triggerNightWatchManually } from "./actions";
 
 export default function DashboardPage() {
   const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
@@ -68,7 +69,16 @@ export default function DashboardPage() {
             </button>
 
             {/* Run (Play) */}
+            {/* Run (Play) */}
             <button
+              onClick={async () => {
+                const result = await triggerNightWatchManually();
+                if (result.success) {
+                  alert(`Night Watch Complete! ✅\nProcessed: ${result.processed} properties.`);
+                } else {
+                  alert(`Night Watch Failed ❌\nError: ${result.error}`);
+                }
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg shadow-purple-600/25"
             >
               <Play className="w-4 h-4" />
