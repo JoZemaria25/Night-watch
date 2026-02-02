@@ -153,3 +153,66 @@ export async function runNightWatch(policies: PolicyRow[]) {
     logs.push(`✅ SYNC COMPLETE.`);
     return { success: true, logs };
 }
+
+// ------------------------------------------------------------------
+// COMPLIANCE CHECKER (Server-Side Logic for Actions)
+// ------------------------------------------------------------------
+export type ComplianceViolation = {
+    type: 'lease_expiry';
+    propertyId: string;
+    unitId: string; // Since we don't have explicit Unit ID, we map Property ID here or address
+    tenantName: string;
+    daysRemaining: number;
+    leaseEnd: string;
+    address: string;
+};
+
+export async function checkCompliance(supabaseClient: any): Promise<ComplianceViolation[]> {
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+    const violations: ComplianceViolation[] = [];
+
+    // 1. Fetch properties with leases expiring in the next 30 days
+    // We filter heavily on DB side for performance
+    const { data: properties, error } = await supabaseClient
+        .from('properties')
+        .select(`
+            id,
+            address,
+            lease_end
+        `)
+        .lte('lease_end', thirtyDaysFromNow.toISOString())
+        .gte('lease_end', today.toISOString());
+
+    if (error || !properties) {
+        console.error("Night Watch Scan Error:", error);
+        return [];
+    }
+
+    // 2. For each risky property, find the active tenant
+    for (const prop of properties) {
+        const { data: tenants } = await supabaseClient
+            .from('tenants')
+            .select('full_name')
+            .eq('property_id', prop.id)
+            .eq('status', 'Active') // Active tenants only
+            .limit(1);
+
+        const tenantName = tenants?.[0]?.full_name || 'Unknown Tenant';
+        const daysRemaining = differenceInDays(new Date(prop.lease_end), today);
+
+        violations.push({
+            type: 'lease_expiry',
+            propertyId: prop.id,
+            unitId: prop.id, // Using Property ID as Unit ID reference for now
+            tenantName: tenantName,
+            daysRemaining,
+            leaseEnd: prop.lease_end,
+            address: prop.address
+        });
+    }
+
+    return violations;
+}

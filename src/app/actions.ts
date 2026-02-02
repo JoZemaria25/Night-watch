@@ -81,8 +81,48 @@ export async function triggerNightWatchManually() {
     }
 
     console.log(`User ${user.id} manually triggered Night Watch.`);
-    const result = await runNightWatchJob();
+
+    // 1. Run the standard notification job
+    const jobResult = await runNightWatchJob();
+
+    // 2. Run the Compliance Engine (Create Ticket Logic)
+    // We utilize the same supabase client (server-side)
+    const { checkCompliance } = await import('@/lib/nightWatchEngine');
+    const violations = await checkCompliance(supabase);
+
+    let ticketsCreated = 0;
+
+    for (const v of violations) {
+        // Idempotency Check: Don't create if open ticket exists for this property + lease expiry
+        // (Simple check: Just check if we recently made one for this lease end? 
+        //  For V1, we just create it. User can close it.)
+
+        // Check if an OPEN ticket already exists for this property to avoid spam
+        const { data: existing } = await supabase
+            .from('maintenance_requests')
+            .select('id')
+            .eq('unit_id', v.propertyId)
+            .eq('title', "Compliance Alert: Lease Expiring")
+            .eq('status', 'open')
+            .single();
+
+        if (!existing) {
+            await supabase.from('maintenance_requests').insert({
+                title: "Compliance Alert: Lease Expiring",
+                priority: "high",
+                status: "open",
+                unit_id: v.propertyId,
+                description: `SYSTEM AUTOMATION:\nLease for ${v.tenantName} at ${v.address} ends on ${v.leaseEnd} (${v.daysRemaining} days left).\n\nAction Required: Renew or vacate.`
+            });
+            ticketsCreated++;
+        }
+    }
 
     revalidatePath("/");
-    return result;
+
+    return {
+        success: true as const,
+        logs: jobResult.logs,
+        processed: (jobResult.processed || 0) + ticketsCreated
+    };
 }
