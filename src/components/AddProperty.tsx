@@ -23,7 +23,7 @@ export function AddProperty() {
   );
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [leaseEnd, setLeaseEnd] = useState("");
+  const [ownerName, setOwnerName] = useState(""); // NEW: Owner Name
   const [rentDay, setRentDay] = useState("");
   const [inspectionDate, setInspectionDate] = useState("");
   const [saving, setSaving] = useState(false);
@@ -83,8 +83,8 @@ export function AddProperty() {
       return;
     }
 
-    if (!address || !city) {
-      alert("Validation Failed: Missing required fields (Address or City)");
+    if (!address || !city || !ownerName) {
+      alert("Validation Failed: Missing required fields (Address, City, or Owner Name)");
       return;
     }
 
@@ -93,8 +93,8 @@ export function AddProperty() {
     const payload = {
       address: address,
       city: city,
+      owner_name: ownerName, // NEW: Payload Field
       rent_due_day: rentDay ? parseInt(rentDay) : null,
-      lease_end: leaseEnd || null,
       next_inspection: inspectionDate || null,
       organization_id: finalOrgId
     };
@@ -149,6 +149,15 @@ export function AddProperty() {
             />
           </div>
           <div className="grid gap-2">
+            <Label>Landlord / Owner Name *</Label>
+            <Input
+              className="bg-zinc-900 border-zinc-800"
+              placeholder="e.g. Chief Okonkwo"
+              onChange={(e) => setOwnerName(e.target.value)}
+              value={ownerName}
+            />
+          </div>
+          <div className="grid gap-2">
             <Label>City / Region *</Label>
             <Input
               className="bg-zinc-900 border-zinc-800"
@@ -172,24 +181,14 @@ export function AddProperty() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Lease End</Label>
+              <Label>Next Inspection</Label>
               <Input
                 type="date"
                 className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
-                onChange={(e) => setLeaseEnd(e.target.value)}
-                value={leaseEnd}
+                onChange={(e) => setInspectionDate(e.target.value)}
+                value={inspectionDate}
               />
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Next Inspection</Label>
-            <Input
-              type="date"
-              className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
-              onChange={(e) => setInspectionDate(e.target.value)}
-              value={inspectionDate}
-            />
           </div>
 
         </div>

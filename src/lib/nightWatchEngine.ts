@@ -168,50 +168,89 @@ export type ComplianceViolation = {
 };
 
 export async function checkCompliance(supabaseClient: any): Promise<ComplianceViolation[]> {
+    console.log("🔍 STARTING COMPLIANCE CHECK (JS DATE LOGIC - MULTI-TENANT)...");
+
+    // 1. Get Today's Date (Zero out time)
     const today = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    today.setHours(0, 0, 0, 0);
+
+    // 2. Get Threshold Date (Today + 30 Days)
+    const thresholdDate = new Date(today);
+    thresholdDate.setDate(today.getDate() + 30);
+
+    console.log(`📅 Today: ${today.toISOString().split('T')[0]}`);
+    console.log(`📅 Threshold: ${thresholdDate.toISOString().split('T')[0]}`);
 
     const violations: ComplianceViolation[] = [];
 
-    // 1. Fetch properties with leases expiring in the next 30 days
-    // We filter heavily on DB side for performance
-    const { data: properties, error } = await supabaseClient
-        .from('properties')
+    // 3. Loop through Tenants
+    // Fetch tenants with lease_end directly from their record
+    const { data: tenants, error } = await supabaseClient
+        .from('tenants')
         .select(`
-            id,
-            address,
-            lease_end
+            *,
+            properties (
+                id,
+                address
+            )
         `)
-        .lte('lease_end', thirtyDaysFromNow.toISOString())
-        .gte('lease_end', today.toISOString());
+        .eq('status', 'Active');
 
-    if (error || !properties) {
-        console.error("Night Watch Scan Error:", error);
+    if (error) {
+        console.error("❌ Error fetching tenants for compliance check:", error);
         return [];
     }
 
-    // 2. For each risky property, find the active tenant
-    for (const prop of properties) {
-        const { data: tenants } = await supabaseClient
-            .from('tenants')
-            .select('full_name')
-            .eq('property_id', prop.id)
-            .eq('status', 'Active') // Active tenants only
-            .limit(1);
+    if (!tenants || tenants.length === 0) {
+        console.log("ℹ️ No active tenants found to check.");
+        return [];
+    }
 
-        const tenantName = tenants?.[0]?.full_name || 'Unknown Tenant';
-        const daysRemaining = differenceInDays(new Date(prop.lease_end), today);
+    // Loop through Tenants
+    for (const tenant of tenants) {
+        const prop = tenant.properties;
 
-        violations.push({
-            type: 'lease_expiry',
-            propertyId: prop.id,
-            unitId: prop.id, // Using Property ID as Unit ID reference for now
-            tenantName: tenantName,
-            daysRemaining,
-            leaseEnd: prop.lease_end,
-            address: prop.address
-        });
+        // Skip if no property linked 
+        if (!prop) {
+            continue;
+        }
+
+        // NEW: Get lease_end from tenant record instead of property
+        const leaseEndString = tenant.lease_end;
+
+        if (!leaseEndString) {
+            // Log if needed, but per instructions just logging check results
+            continue;
+        }
+
+        // Parse lease_end into a Date object
+        const leaseEnd = new Date(leaseEndString);
+        // Set hours to 0,0,0,0
+        leaseEnd.setHours(0, 0, 0, 0);
+
+        // The Check: lease_end valid AND lease_end <= thresholdDate AND lease_end >= today
+        const isValid = !isNaN(leaseEnd.getTime());
+        const isExpiringSoon = leaseEnd <= thresholdDate;
+        const isFutureOrToday = leaseEnd >= today;
+
+        const isViolation = isValid && isExpiringSoon && isFutureOrToday;
+
+        // Logging
+        console.log(`Tenant: ${tenant.full_name}, Lease End: ${leaseEndString}, Flagged: ${isViolation}`);
+
+        if (isViolation) {
+            const daysRemaining = differenceInDays(leaseEnd, today);
+
+            violations.push({
+                type: 'lease_expiry',
+                propertyId: prop.id,
+                unitId: prop.id, // Using Property ID as Unit ID reference
+                tenantName: tenant.full_name,
+                daysRemaining,
+                leaseEnd: leaseEndString,
+                address: prop.address
+            });
+        }
     }
 
     return violations;

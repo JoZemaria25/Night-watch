@@ -38,6 +38,8 @@ export function AddTenant() {
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [propertyId, setPropertyId] = useState("");
+    const [leaseStart, setLeaseStart] = useState("");
+    const [leaseEnd, setLeaseEnd] = useState("");
     const [properties, setProperties] = useState<Property[]>([]);
 
     // Loading & Org ID State
@@ -133,6 +135,8 @@ export function AddTenant() {
             email,
             phone,
             property_id: propertyId,
+            lease_start: leaseStart || null, // NEW
+            lease_end: leaseEnd || null,     // NEW
             status: "Active",
             organization_id: finalOrgId
         };
@@ -219,6 +223,29 @@ export function AddTenant() {
                             value={phone}
                         />
                     </div>
+
+                    {/* NEW: Lease Dates */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label>Lease Start Date</Label>
+                            <Input
+                                type="date"
+                                className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
+                                onChange={(e) => setLeaseStart(e.target.value)}
+                                value={leaseStart}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Lease End Date</Label>
+                            <Input
+                                type="date"
+                                className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
+                                onChange={(e) => setLeaseEnd(e.target.value)}
+                                value={leaseEnd}
+                            />
+                        </div>
+                    </div>
+
                     <div className="grid gap-2">
                         <Label>Assign Unit *</Label>
                         <Select onValueChange={setPropertyId} disabled={loading || !organizationId}>
