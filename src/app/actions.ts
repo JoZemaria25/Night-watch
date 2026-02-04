@@ -94,21 +94,21 @@ export async function triggerNightWatchManually() {
 
     for (const v of violations) {
         // Idempotency Check: Don't create if open ticket exists for this property + lease expiry
-        // (Simple check: Just check if we recently made one for this lease end? 
-        //  For V1, we just create it. User can close it.)
 
-        // Check if an OPEN ticket already exists for this property to avoid spam
+        // Use dynamically generated title from Engine
+        const ticketTitle = v.ticketTitle || "Compliance Alert: Lease Expiring";
+
         const { data: existing } = await supabase
             .from('maintenance_requests')
             .select('id')
             .eq('unit_id', v.propertyId)
-            .eq('title', "Compliance Alert: Lease Expiring")
+            .eq('title', ticketTitle)
             .eq('status', 'open')
             .single();
 
         if (!existing) {
             await supabase.from('maintenance_requests').insert({
-                title: "Compliance Alert: Lease Expiring",
+                title: ticketTitle,
                 priority: "high",
                 status: "open",
                 unit_id: v.propertyId,

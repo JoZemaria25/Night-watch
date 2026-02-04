@@ -20,19 +20,17 @@ type Property = {
     id: string;
     address: string;
     city: string;
-    lease_end?: string;
+    owner_name?: string; // NEW: Owner
     rent_due_day?: number;
     next_inspection_date?: string;
-    [key: string]: any; // Allow for other fields like image_url
+    [key: string]: any;
 };
 
 export function EditProperty({ property }: { property: Property }) {
     const [open, setOpen] = useState(false);
     const [address, setAddress] = useState(property.address);
     const [city, setCity] = useState(property.city);
-    // Handle both camelCase (from mapped) and snake_case (from raw) just in case, 
-    // but based on AssetStream it spreads ...prop so it has snake_case keys too.
-    const [leaseEnd, setLeaseEnd] = useState(property.lease_end || property.leaseEnd || "");
+    const [ownerName, setOwnerName] = useState(property.owner_name || ""); // Load Owner
     const [rentDay, setRentDay] = useState(property.rent_due_day?.toString() || "");
     const [inspectionDate, setInspectionDate] = useState(property.next_inspection_date || "");
     const [saving, setSaving] = useState(false);
@@ -44,7 +42,7 @@ export function EditProperty({ property }: { property: Property }) {
             .update({
                 address,
                 city,
-                lease_end: leaseEnd,
+                owner_name: ownerName, // Update Owner
                 rent_due_day: rentDay ? parseInt(rentDay) : null,
                 next_inspection_date: inspectionDate
             })
@@ -54,7 +52,7 @@ export function EditProperty({ property }: { property: Property }) {
 
         if (!error) {
             setOpen(false);
-            window.location.reload(); // Quick refresh to show data
+            window.location.reload();
         } else {
             alert("Error updating property: " + error.message);
         }
@@ -83,6 +81,18 @@ export function EditProperty({ property }: { property: Property }) {
                             onChange={(e) => setAddress(e.target.value)}
                         />
                     </div>
+
+                    {/* NEW: Owner Field */}
+                    <div className="grid gap-2">
+                        <Label>Landlord / Owner</Label>
+                        <Input
+                            className="bg-zinc-900 border-zinc-800"
+                            value={ownerName}
+                            onChange={(e) => setOwnerName(e.target.value)}
+                            placeholder="e.g. Chief Okonkwo"
+                        />
+                    </div>
+
                     <div className="grid gap-2">
                         <Label>City / Region</Label>
                         <Input
@@ -105,24 +115,14 @@ export function EditProperty({ property }: { property: Property }) {
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Lease End</Label>
+                            <Label>Next Inspection</Label>
                             <Input
                                 type="date"
                                 className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
-                                value={leaseEnd}
-                                onChange={(e) => setLeaseEnd(e.target.value)}
+                                value={inspectionDate}
+                                onChange={(e) => setInspectionDate(e.target.value)}
                             />
                         </div>
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label>Next Inspection</Label>
-                        <Input
-                            type="date"
-                            className="bg-zinc-900 border-zinc-800 invert-calendar-icon"
-                            value={inspectionDate}
-                            onChange={(e) => setInspectionDate(e.target.value)}
-                        />
                     </div>
 
                 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Ghost, MoreHorizontal, Building2, Trash } from "lucide-react";
+import { Ghost, MoreHorizontal, Building2, Trash, User } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { EditProperty } from "./EditProperty";
 
@@ -9,8 +9,7 @@ type Property = {
   id: string;
   address: string;
   city: string;
-  leaseEnd?: string;
-  lease_end?: string;
+  owner_name?: string; // NEW
   rent_due_day?: number;
   next_inspection_date?: string;
   image_url?: string;
@@ -70,7 +69,6 @@ export function AssetStream({ limit }: { limit?: number }) {
         if (data) {
           const enhancedData = data.map((prop: any, index: number) => ({
             ...prop,
-            leaseEnd: prop.lease_end || "No Date Set",
             image_url: `https://images.unsplash.com/photo-${index % 2 === 0 ? '1600585154340-be6161a56a0c' : '1600607687939-ce8a6c25118c'}?w=800&auto=format&fit=crop&q=60`
           }));
           setProperties(enhancedData);
@@ -160,7 +158,7 @@ export function AssetStream({ limit }: { limit?: number }) {
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-lg font-medium text-white truncate">{prop.address}</h3>
                 </div>
-                <p className="text-sm text-zinc-500 uppercase tracking-wider">{prop.city} • Active Lease</p>
+                <p className="text-sm text-zinc-500 uppercase tracking-wider">{prop.city} • Active</p>
 
                 {/* Visual Timeline Bar */}
                 <div className="mt-4 h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
@@ -168,10 +166,14 @@ export function AssetStream({ limit }: { limit?: number }) {
                 </div>
               </div>
 
-              {/* EXPIRATION DATA */}
+              {/* OWNER DATA */}
               <div className="text-right shrink-0">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Lease Ends</div>
-                <div className="font-mono text-xl text-white">{prop.leaseEnd}</div>
+                <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1 flex items-center gap-1 justify-end">
+                  <User className="h-3 w-3" /> Owner
+                </div>
+                <div className="font-medium text-sm text-white max-w-[150px] truncate">
+                  {prop.owner_name || "Unassigned"}
+                </div>
               </div>
             </div>
           </div>
