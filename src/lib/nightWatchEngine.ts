@@ -146,30 +146,27 @@ export async function runNightWatch(policies: PolicyRow[]) {
 // ------------------------------------------------------------------
 // COMPLIANCE CHECKER (Server-Side Logic for Actions)
 // ------------------------------------------------------------------
-export type ComplianceViolation = {
-    type: 'lease_expiry';
-    propertyId: string;
-    unitId: string;
-    tenantName: string;
-    daysRemaining: number;
-    leaseEnd: string;
-    address: string;
-    ticketTitle: string; // NEW: Pre-formatted title
+// ------------------------------------------------------------------
+// COMPLIANCE CHECKER (Server-Side Logic for Actions)
+// ------------------------------------------------------------------
+export type ComplianceResult = {
+    checkedCount: number;
+    violationCount: number;
+    violations: any[];
 };
 
-export async function checkCompliance(supabaseClient: any): Promise<ComplianceViolation[]> {
+export async function checkCompliance(supabase: any) {
     console.log("🔍 STARTING COMPLIANCE CHECK (JS DATE LOGIC - MULTI-TENANT)...");
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const thresholdDate = new Date(today);
-    thresholdDate.setDate(today.getDate() + 30);
-
-    const violations: ComplianceViolation[] = [];
+    const violations: any[] = [];
+    let checkedCount = 0;
+    let violationCount = 0;
 
     // Fetch Active Tenants with Property details
-    const { data: tenants, error } = await supabaseClient
+    const { data: tenants, error } = await supabase
         .from('tenants')
         .select(`
             *,
@@ -183,39 +180,76 @@ export async function checkCompliance(supabaseClient: any): Promise<ComplianceVi
 
     if (error) {
         console.error("❌ Error fetching tenants:", error);
-        return [];
+        return { checkedCount: 0, violationCount: 0, violations: [] };
     }
 
-    if (!tenants) return [];
+    if (!tenants) return { checkedCount: 0, violationCount: 0, violations: [] };
+
+    console.log(`Checking ${tenants.length} tenants...`);
 
     for (const tenant of tenants) {
+        checkedCount++;
         const prop = tenant.properties;
+
+        // Skip if no property or no lease end date
         if (!prop || !tenant.lease_end) continue;
 
         const leaseEnd = new Date(tenant.lease_end);
         leaseEnd.setHours(0, 0, 0, 0);
 
         const isValid = !isNaN(leaseEnd.getTime());
-        const isExpiringSoon = leaseEnd <= thresholdDate;
-        const isFutureOrToday = leaseEnd >= today;
 
-        if (isValid && isExpiringSoon && isFutureOrToday) {
-            const daysRemaining = differenceInDays(leaseEnd, today);
+        // Calculate days remaining
+        const daysRemaining = differenceInDays(leaseEnd, today);
 
-            violations.push({
-                type: 'lease_expiry',
-                propertyId: prop.id,
-                unitId: prop.id,
-                tenantName: tenant.full_name,
-                daysRemaining,
-                leaseEnd: tenant.lease_end,
-                address: prop.address,
-                ticketTitle: `Lease Expiring: ${tenant.full_name} at ${prop.address}`
-            });
+        // Violation Condition: If days_remaining <= 30 AND days_remaining >= 0
+        const isViolation = isValid && daysRemaining <= 30 && daysRemaining >= 0;
 
-            console.log(`🚨 Violation Found: ${tenant.full_name} (${daysRemaining} days left)`);
+        if (isViolation) {
+            console.log(`⚠️ Violation found for ${tenant.full_name}: ${daysRemaining} days remaining.`);
+
+            const ticketTitle = `Lease Expiring: ${tenant.full_name} at ${prop.address}`;
+            const description = `SYSTEM AUTOMATION:\nLease for ${tenant.full_name} at ${prop.address} ends on ${tenant.lease_end} (${daysRemaining} days left).\n\nAction Required: Renew or vacate.\n\n[Triggered by Night Watch]`;
+
+            // IDEMPOTENCY CHECK: Don't create if OPEN ticket exists
+            // We need to use the passed supabase client
+            const { data: existing } = await supabase
+                .from('maintenance_requests')
+                .select('id')
+                .eq('unit_id', prop.id)
+                .eq('title', ticketTitle)
+                .neq('status', 'closed') // Check against non-closed tickets
+                .maybeSingle();
+
+            if (!existing) {
+                // INSERT TICKET
+                const { error: insertError } = await supabase
+                    .from('maintenance_requests')
+                    .insert({
+                        title: ticketTitle,
+                        priority: "high",
+                        status: "open",
+                        unit_id: prop.id, // Assuming unit_id links to property
+                        description: description
+                        // created_by is usually handled by RLS server-side or default
+                    });
+
+                if (insertError) {
+                    console.error(`❌ Failed to create ticket:`, insertError);
+                } else {
+                    violationCount++;
+                    violations.push({
+                        tenant: tenant.full_name,
+                        daysRemaining,
+                        ticketTitle
+                    });
+                    console.log(`🚨 Created Ticket: ${ticketTitle}`);
+                }
+            } else {
+                console.log(`ℹ️ Ticket already exists (ID: ${existing.id}), skipping.`);
+            }
         }
     }
 
-    return violations;
+    return { checkedCount, violationCount, violations };
 }

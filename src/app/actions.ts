@@ -88,41 +88,26 @@ export async function triggerNightWatchManually() {
     // 2. Run the Compliance Engine (Create Ticket Logic)
     // We utilize the same supabase client (server-side)
     const { checkCompliance } = await import('@/lib/nightWatchEngine');
-    const violations = await checkCompliance(supabase);
 
-    let ticketsCreated = 0;
-
-    for (const v of violations) {
-        // Idempotency Check: Don't create if open ticket exists for this property + lease expiry
-
-        // Use dynamically generated title from Engine
-        const ticketTitle = v.ticketTitle || "Compliance Alert: Lease Expiring";
-
-        const { data: existing } = await supabase
-            .from('maintenance_requests')
-            .select('id')
-            .eq('unit_id', v.propertyId)
-            .eq('title', ticketTitle)
-            .eq('status', 'open')
-            .single();
-
-        if (!existing) {
-            await supabase.from('maintenance_requests').insert({
-                title: ticketTitle,
-                priority: "high",
-                status: "open",
-                unit_id: v.propertyId,
-                description: `SYSTEM AUTOMATION:\nLease for ${v.tenantName} at ${v.address} ends on ${v.leaseEnd} (${v.daysRemaining} days left).\n\nAction Required: Renew or vacate.`
-            });
-            ticketsCreated++;
-        }
-    }
+    // Pass the supabase client into the checkCompliance function
+    const result = await checkCompliance(supabase);
 
     revalidatePath("/");
 
+    // Return detailed string message as requested
+    // "message: Checked ${result.checkedCount} tenants. Found ${result.violationCount} expiring leases."
+
+    // Note: The previous return type was complex { success: true, logs: ..., processed: ... }
+    // The user asked: "Return: Instead of just { success: true }, return a detailed string: message: ..."
+    // This implies changing the return type significantly.
+    // However, existing clients might depend on `success`.
+    // I will return an object with success AND the message, to be safe, or just the object if adhering strictly.
+    // User Instructions: "Return: Instead of just `{ success: true }`, return a detailed string: `message: ...`"
+    // This might mean: return { success: true, message: ... } or just { message: ... }?
+    // Usually actions return objects. I'll return { success: true, message: ... }.
+
     return {
-        success: true as const,
-        logs: jobResult.logs,
-        processed: (jobResult.processed || 0) + ticketsCreated
+        success: true,
+        message: `Checked ${result.checkedCount} tenants. Found ${result.violationCount} expiring leases.`
     };
 }
