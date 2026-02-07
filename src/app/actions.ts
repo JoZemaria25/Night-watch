@@ -3,7 +3,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { runNightWatchJob } from "@/lib/nightWatchJob";
 import { checkCompliance } from "@/lib/nightWatchEngine";
 
@@ -93,11 +92,16 @@ export async function triggerNightWatchManually() {
 
     revalidatePath("/");
 
-    // Return clean success message
-    // "Night Watch Scanned [X] Active Tenants. Found [Y] Violations. Tickets have been generated."
+    // Conditional Success Message
+    let message = "";
+    if (result.violationCount > 0) {
+        message = `Night Watch Complete. 🚨 Found ${result.violationCount} Violations. Tickets have been generated.`;
+    } else {
+        message = `Night Watch Complete. Scanned ${result.checkedCount} tenants. No expiring leases found.`;
+    }
 
     return {
         success: true,
-        message: `Night Watch Scanned ${result.checkedCount} Active Tenants. Found ${result.violationCount} Violations. Tickets have been generated.`
+        message: message
     };
 }
