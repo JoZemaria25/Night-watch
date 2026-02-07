@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { runNightWatchJob } from "@/lib/nightWatchJob";
-import { checkCompliance } from "@/lib/nightWatchEngine"; // Ensure this import is correct
+import { checkCompliance } from "@/lib/nightWatchEngine";
 
 export async function createOrganizationAction(prevState: any, formData: FormData) {
     const name = formData.get("name") as string;
@@ -25,8 +25,6 @@ export async function createOrganizationAction(prevState: any, formData: FormDat
                     return cookieStore.get(name)?.value;
                 },
                 set(name: string, value: string, options: CookieOptions) {
-                    // Mutations in Server Actions typically don't need to set request cookies 
-                    // unless dealing with auth refresh, but required for client construction
                 },
                 remove(name: string, options: CookieOptions) {
                 },
@@ -83,8 +81,7 @@ export async function triggerNightWatchManually() {
 
     console.log(`User ${user.id} manually triggered Night Watch.`);
 
-    // 1. Run the standard notification job (if applicable, ensuring no conflict)
-    // Assuming runNightWatchJob handles other non-critical notifications or is legacy
+    // 1. Run the standard notification job (if applicable)
     try {
         await runNightWatchJob();
     } catch (e) {
@@ -92,15 +89,15 @@ export async function triggerNightWatchManually() {
     }
 
     // 2. Run the Compliance Engine (Refactored Logic)
-    // Pass the supabase client into the checkCompliance function
     const result = await checkCompliance(supabase);
 
     revalidatePath("/");
 
-    // Return detailed string message as requested
-    // Format: "Night Watch Scanned [X] Tenants. Found [Y] Violations."
+    // Return detailed string message WITH DEBUG LOGS
+    const logOutput = result.debugLog ? result.debugLog.join('\n') : "No logs returned.";
+
     return {
         success: true,
-        message: `Night Watch Scanned ${result.checkedCount} Tenants. Found ${result.violationCount} Violations.`
+        message: `Scanned ${result.checkedCount} Tenants.\nFound ${result.violationCount} Violations.\n\nLOGS:\n${logOutput}`
     };
 }
