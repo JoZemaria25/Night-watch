@@ -23,17 +23,11 @@ export type ComplianceResult = {
     checkedCount: number;
     violationCount: number;
     violations: any[];
-    debugLog: string[];
 };
 
 export async function checkCompliance(supabase: any) {
-    const logs: string[] = [];
-    logs.push("🔍 STARTING COMPLIANCE CHECK (Fixed Date Logic)...");
-
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today (Local Server Time)
-
-    logs.push(`📅 Server Today: ${today.toISOString()}`);
 
     const violations: any[] = [];
     let checkedCount = 0;
@@ -53,27 +47,20 @@ export async function checkCompliance(supabase: any) {
         .eq('status', 'Active');
 
     if (error) {
-        logs.push(`❌ Error fetching tenants: ${error.message}`);
         console.error("❌ Error fetching tenants:", error);
-        return { checkedCount: 0, violationCount: 0, violations: [], debugLog: logs };
+        return { checkedCount: 0, violationCount: 0, violations: [] };
     }
 
     if (!tenants || tenants.length === 0) {
-        logs.push("ℹ️ No active tenants found.");
-        return { checkedCount: 0, violationCount: 0, violations: [], debugLog: logs };
+        return { checkedCount: 0, violationCount: 0, violations: [] };
     }
-
-    logs.push(`✅ Found ${tenants.length} active tenants. Processing...`);
 
     // 2. LOOP: Check `tenant.lease_end` vs Today
     for (const tenant of tenants) {
         checkedCount++;
         const prop = tenant.properties;
 
-        if (!tenant.lease_end) {
-            logs.push(`⚠️ Skipping ${tenant.full_name}: No lease end date.`);
-            continue;
-        }
+        if (!tenant.lease_end) continue;
 
         // --- FIXED DATE LOGIC START ---
         // Split the YYYY-MM-DD string to avoid Timezone shifts
@@ -87,14 +74,10 @@ export async function checkCompliance(supabase: any) {
         const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         // --- FIXED DATE LOGIC END ---
 
-        logs.push(`Checking ${tenant.full_name}: Ends ${tenant.lease_end} (${daysRemaining} days left)`);
-
         // 3. RULE: If `days_remaining <= 30` and `days_remaining >= 0`, trigger a violation.
         const isViolation = daysRemaining <= 30 && daysRemaining >= 0;
 
         if (isViolation) {
-            logs.push(`🚨 VIOLATION DETECTED for ${tenant.full_name}`);
-
             // 4. VIOLATION ACTION 1 (DB): Create a `maintenance_request`
             const ticketTitle = `Lease Expiring: ${tenant.full_name}`;
             const address = prop?.address || "Unknown Property";
@@ -119,14 +102,14 @@ export async function checkCompliance(supabase: any) {
                     .from('maintenance_requests')
                     .insert({
                         title: ticketTitle,
-                        priority: "high",
+                        priority: "high", // CONFIRMED: High Priority
                         status: "open",
                         unit_id: unitId,
                         description: description
                     });
 
                 if (insertError) {
-                    logs.push(`❌ Failed to create ticket: ${insertError.message}`);
+                    console.error(`❌ Failed to create ticket:`, insertError);
                 } else {
                     violationCount++;
                     violations.push({
@@ -134,10 +117,7 @@ export async function checkCompliance(supabase: any) {
                         daysRemaining,
                         ticketTitle
                     });
-                    logs.push(`✅ Ticket Created: ${ticketTitle}`);
                 }
-            } else {
-                logs.push(`ℹ️ Ticket already exists, skipping.`);
             }
 
             // 5. VIOLATION ACTION 2 (Future-Proofing): Call sendAlert placeholder
@@ -145,7 +125,7 @@ export async function checkCompliance(supabase: any) {
         }
     }
 
-    return { checkedCount, violationCount, violations, debugLog: logs };
+    return { checkedCount, violationCount, violations };
 }
 
 // Keeping for backward compatibility if needed

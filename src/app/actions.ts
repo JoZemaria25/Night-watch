@@ -93,11 +93,11 @@ export async function triggerNightWatchManually() {
 
     revalidatePath("/");
 
-    // Return detailed string message WITH DEBUG LOGS
-    const logOutput = result.debugLog ? result.debugLog.join('\n') : "No logs returned.";
+    // Return clean success message
+    // "Night Watch Scanned [X] Active Tenants. Found [Y] Violations. Tickets have been generated."
 
     return {
         success: true,
-        message: `Scanned ${result.checkedCount} Tenants.\nFound ${result.violationCount} Violations.\n\nLOGS:\n${logOutput}`
+        message: `Night Watch Scanned ${result.checkedCount} Active Tenants. Found ${result.violationCount} Violations. Tickets have been generated.`
     };
 }
