@@ -58,7 +58,7 @@ export default function DashboardPage() {
               onClick={async () => {
                 const result = await triggerNightWatchManually();
                 if (result.success) {
-                  alert(`Night Watch Complete! ✅\nProcessed: ${result.processed} properties.`);
+                  alert(`Night Watch Complete! ✅\n${result.message}`);
                 } else {
                   alert(`Night Watch Failed ❌\nError: ${result.error}`);
                 }
@@ -142,16 +142,11 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* ✅ REPLACED THE 100 LINES OF HARDCODED FORM WITH THIS ONE COMPONENT 
-        This will now load the "Orange Button" modal you built.
-      */}
+      {/* Report Issue Modal */}
       <ReportIssueModal
         isOpen={isMaintenanceOpen}
         onClose={() => setIsMaintenanceOpen(false)}
-        onSuccess={() => {
-          // Optional: You can force a refresh here if needed
-          console.log("Request submitted!");
-        }}
+        onSuccess={() => console.log("Request submitted!")}
       />
 
     </div>
