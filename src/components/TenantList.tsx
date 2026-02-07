@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Trash, User, Users } from "lucide-react";
+import { Trash, User, Users, Calendar, AlertTriangle, CheckCircle } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { format, differenceInDays, isPast, isToday } from "date-fns";
 import { EditTenant } from "./EditTenant";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type Tenant = {
     id: string;
@@ -11,6 +14,7 @@ type Tenant = {
     email: string;
     phone: string;
     status: string;
+    lease_end?: string; // Added
     property_id: string;
     properties?: {
         address: string;
@@ -97,6 +101,48 @@ export function TenantList({ limit }: { limit?: number }) {
         }
     }
 
+    // Helper to render lease status
+    const renderLeaseStatus = (leaseEnd: string | undefined) => {
+        if (!leaseEnd) {
+            return (
+                <div className="flex items-center gap-1.5 text-amber-500 text-xs font-medium bg-amber-950/20 px-2 py-1 rounded border border-amber-900/30">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Date Missing</span>
+                </div>
+            );
+        }
+
+        const date = new Date(leaseEnd);
+        const today = new Date();
+        const daysLeft = differenceInDays(date, today);
+        const isExpired = isPast(date) && !isToday(date);
+
+        if (isExpired) {
+            return (
+                <div className="flex items-center gap-1.5 text-red-400 text-xs font-medium bg-red-950/20 px-2 py-1 rounded border border-red-900/30">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Expired {format(date, 'MMM d')}</span>
+                </div>
+            );
+        }
+
+        if (daysLeft <= 30) {
+            return (
+                <div className="flex items-center gap-1.5 text-amber-400 text-xs font-medium bg-amber-950/20 px-2 py-1 rounded border border-amber-900/30">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Expiring ({daysLeft} days)</span>
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium bg-zinc-800/50 px-2 py-1 rounded border border-zinc-800">
+                <Calendar className="w-3 h-3" />
+                <span>Ends {format(date, 'MMM d, yyyy')}</span>
+            </div>
+        );
+    };
+
     if (loading) return <div className="text-zinc-500 text-sm animate-pulse">Loading Tenants...</div>;
 
     // SECURITY: If no organization, show empty state - NEVER show other users' data
@@ -157,8 +203,14 @@ export function TenantList({ limit }: { limit?: number }) {
                                 <h3 className="text-base font-medium text-white truncate">
                                     {tenant.full_name}
                                 </h3>
-                                <p className="text-xs text-zinc-500 truncate">{tenant.email}</p>
-                                <div className="mt-2 flex items-center gap-2">
+                                <p className="text-xs text-zinc-500 truncate mb-2">{tenant.email}</p>
+
+                                {/* Lease Status Badge */}
+                                <div className="mb-2">
+                                    {renderLeaseStatus(tenant.lease_end)}
+                                </div>
+
+                                <div className="flex items-center gap-2">
                                     <span className="text-[10px] uppercase tracking-wider text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
                                         {tenant.status}
                                     </span>

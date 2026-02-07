@@ -129,14 +129,19 @@ export function AddTenant() {
             return;
         }
 
+        if (!leaseEnd) {
+            alert("Lease End Date is required for the Night Watch engine.");
+            return;
+        }
+
         setSaving(true);
         const payload = {
             full_name: fullName,
             email,
             phone,
             property_id: propertyId,
-            lease_start: leaseStart || null, // NEW
-            lease_end: leaseEnd || null,     // NEW
+            lease_start: leaseStart, // Renamed for clarity in diff, was leaseStart || null
+            lease_end: leaseEnd,     // Required now
             status: "Active",
             organization_id: finalOrgId
         };
