@@ -134,6 +134,42 @@ export async function checkCompliance(supabase: any) {
         }
     }
 
+    // 6. LOGGING (The Pulse)
+    let organizationId = null;
+
+    // A. Try to get Org ID from tenants
+    if (tenants.length > 0) {
+        organizationId = tenants[0].organization_id;
+    }
+
+    // B. If no tenants, try to get from Auth (since this usually runs in user context)
+    if (!organizationId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).maybeSingle();
+            organizationId = profile?.organization_id;
+        }
+    }
+
+    if (organizationId) {
+        const logPayload = {
+            organization_id: organizationId,
+            event_type: 'compliance_scan',
+            status: violationCount > 0 ? 'warning' : 'success',
+            details: `Scanned ${checkedCount} tenants. Found ${violationCount} issues.`,
+            message: `Night Watch Scan: ${violationCount} violations found in ${checkedCount} tenants.` // Fallback/extra field
+        };
+
+        const { error: logError } = await supabase.from('asset_log').insert(logPayload);
+        if (logError) {
+            console.error("❌ Failed to log Night Watch run:", logError);
+        } else {
+            console.log("✅ Night Watch run logged successfully.");
+        }
+    } else {
+        console.warn("⚠️ Could not log Night Watch run: Missing Organization ID.");
+    }
+
     return { checkedCount, violationCount, violations };
 }
 

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Wrench, Play } from "lucide-react";
 
 // ✅ Named exports
-import { PortfolioPulse } from "../components/PortfolioPulse";
+import { SystemHeartbeat } from "../components/SystemHeartbeat";
+import { SystemStatus } from "../components/SystemStatus";
 import { AssetStream } from "../components/AssetStream";
 import { TenantList } from "../components/TenantList";
 import { TenantRequest } from "../components/dashboard/TenantRequest";
@@ -74,30 +75,9 @@ export default function DashboardPage() {
         {/* ROW 1: Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2">
-            <PortfolioPulse />
+            <SystemHeartbeat />
           </div>
-          <div className="bg-[#111] border border-[#222] rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 text-zinc-100">System Status</h3>
-            <div className="text-green-400 flex items-center gap-2 text-sm">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Operational
-            </div>
-            <p className="text-zinc-500 text-sm mt-4">All systems running normally.</p>
-            <div className="mt-6 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Engine</span>
-                <span className="text-green-400">Online</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Database</span>
-                <span className="text-green-400">Connected</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Notifications</span>
-                <span className="text-green-400">Active</span>
-              </div>
-            </div>
-          </div>
+          <SystemStatus />
         </div>
 
         {/* ROW 2: Logic Builder */}
