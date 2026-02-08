@@ -137,18 +137,18 @@ export async function checkCompliance(supabase: any) {
     // 6. LOGGING (The Pulse)
     let organizationId = null;
 
+    // 0. Get User (Strict RLS Requirement)
+    const { data: { user } } = await supabase.auth.getUser();
+
     // A. Try to get Org ID from tenants
     if (tenants.length > 0) {
         organizationId = tenants[0].organization_id;
     }
 
     // B. If no tenants, try to get from Auth (since this usually runs in user context)
-    if (!organizationId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).maybeSingle();
-            organizationId = profile?.organization_id;
-        }
+    if (!organizationId && user) {
+        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).maybeSingle();
+        organizationId = profile?.organization_id;
     }
 
     if (organizationId) {
@@ -157,7 +157,8 @@ export async function checkCompliance(supabase: any) {
             event_type: 'compliance_scan',
             status: violationCount > 0 ? 'warning' : 'success',
             details: `Scanned ${checkedCount} tenants. Found ${violationCount} issues.`,
-            message: `Night Watch Scan: ${violationCount} violations found in ${checkedCount} tenants.` // Fallback/extra field
+            message: `Night Watch Scan: ${violationCount} violations found in ${checkedCount} tenants.`,
+            user_id: user?.id // <--- THE CRITICAL FIX (Signs the log)
         };
 
         const { error: logError } = await supabase.from('asset_log').insert(logPayload);
