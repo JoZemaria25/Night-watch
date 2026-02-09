@@ -1,22 +1,22 @@
+export const runtime = 'edge'; // ⚡ Runs instantly on the edge
 
-import { NextRequest, NextResponse } from 'next/server';
-import { runNightWatchJob } from '@/lib/nightWatchJob';
-
-// Force dynamic execution for caching strategies
-export const dynamic = 'force-dynamic';
-
-export async function GET(req: NextRequest) {
-    // 1. Security Check
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return new NextResponse('Unauthorized', { status: 401 });
+export async function GET(req: Request) {
+    // 1. Verify Vercel sent the request
+    if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+        return new Response('Unauthorized', { status: 401 });
     }
 
-    try {
-        console.log('🚀 Triggering Cron via API Route...');
-        const result = await runNightWatchJob();
-        return NextResponse.json(result);
-    } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
+    // 2. Forward the call directly to Supabase
+    // We reuse the same CRON_SECRET for simplicity
+    const response = await fetch('https://zycjghzzlecjyotonqvt.supabase.co/functions/v1/lease-ends-checker', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.CRON_SECRET}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    // 3. Return Supabase's response exactly as is
+    const data = await response.json();
+    return Response.json(data);
 }
