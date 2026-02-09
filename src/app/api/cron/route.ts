@@ -1,21 +1,27 @@
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+// We use the Node.js runtime for better stability with Env Vars
+export async function GET(req: Request) {
+    const authHeader = req.headers.get('authorization');
 
-export async function GET(request: Request) {
-    // 1. GET THE FULL LIST OF KEYS
-    const envVars = Object.keys(process.env);
+    // 1. Verify Vercel sent the correct key
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        return new NextResponse('Unauthorized', { status: 401 });
+    }
 
-    console.log("------------------------------------------------");
-    console.log("🔍 DEBUG: ENVIRONMENT DUMP");
-    console.log("   - Total Variables:", envVars.length);
-    console.log("   - Keys Available:", JSON.stringify(envVars)); // <--- THIS IS THE KEY
-    console.log("   - Is CRON_SECRET present?", envVars.includes('CRON_SECRET') ? "YES" : "NO");
-    console.log("------------------------------------------------");
+    // 2. Forward the call to Supabase
+    try {
+        const response = await fetch('https://zycjghzzlecjyotonqvt.supabase.co/functions/v1/lease-ends-checker', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.CRON_SECRET}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
-    return NextResponse.json({
-        status: 'Debug Complete',
-        keys: envVars,
-        hasSecret: envVars.includes('CRON_SECRET')
-    });
+        const data = await response.json();
+        return NextResponse.json(data);
+    } catch (error) {
+        return new NextResponse('Internal Error', { status: 500 });
+    }
 }
