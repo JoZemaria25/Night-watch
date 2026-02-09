@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     // 3. Fetch ALL Tenants (No filters, just get the raw data)
     const { data: tenants, error } = await supabase
         .from('tenants')
-        .select('id, name, lease_end, status, properties (id, name)');
+        .select('id, name, lease_end, status, properties (id, address)')
 
     if (error) {
         console.log("❌ DB Error:", error.message);
