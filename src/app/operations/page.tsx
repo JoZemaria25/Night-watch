@@ -71,54 +71,26 @@ export default function MaintenancePage() {
         setLoading(true);
         console.log(">>> Fetching Tickets...");
         try {
-            // 0. Get User Context for RLS
-            const { data: { user } } = await supabase.auth.getUser();
-            let orgId = null;
-
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('organization_id')
-                    .eq('id', user.id)
-                    .single();
-                orgId = profile?.organization_id;
-                console.log("   > Context: User ID:", user.id, "Org ID:", orgId);
-            }
-
-            if (!orgId) {
-                console.warn("   > No Organization ID found. RLS might block results.");
-            }
-
-            // 1. Build Query
-            let query = supabase
+            const { data, error } = await supabase
                 .from('maintenance_requests')
                 .select(`
           *,
-          properties:unit_id (
-            address,
-            owner_name
+          properties (
+            name,
+            address
           )
         `)
                 .neq('status', 'Resolved')
                 .neq('status', 'closed')
-                .order('priority', { ascending: false }) // Urgent first
+                .order('priority', { ascending: false })
                 .order('created_at', { ascending: false });
 
-            // 2. Apply Organization Filter (RLS Helper)
-            if (orgId) {
-                query = query.eq('organization_id', orgId);
-            }
-
-            const { data, error } = await query;
-
             if (error) {
-                console.error("   > Supabase Error:", error);
-                throw error;
+                console.error("Fetch Error:", error.message, error.details);
+            } else {
+                console.log("Fetched Tickets:", data);
+                setTickets(data || []);
             }
-
-            console.log("   > Success. Records found:", data?.length);
-            // console.table(data); // Optional: View raw data
-            setTickets(data || []);
         } catch (err) {
             console.error("Failed to fetch tickets:", err);
         } finally {
