@@ -27,7 +27,7 @@ export function Sidebar() {
         { name: "Dashboard", href: "/", icon: LayoutDashboard },
         { name: "Properties", href: "/properties", icon: Building2 },
         { name: "Tenants", href: "/tenants", icon: Users },
-        { name: "Operations", href: "/admin/maintenance", icon: Wrench },
+        { name: "Operations", href: "/operations", icon: ShieldCheck },
         { name: "Settings", href: "/settings", icon: Settings },
     ];
 
