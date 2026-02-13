@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, Users, Settings, LogOut, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Building2, Users, Settings, LogOut, ShieldCheck, Wrench } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +27,7 @@ export function Sidebar() {
         { name: "Dashboard", href: "/", icon: LayoutDashboard },
         { name: "Properties", href: "/properties", icon: Building2 },
         { name: "Tenants", href: "/tenants", icon: Users },
+        { name: "Operations", href: "/admin/maintenance", icon: Wrench },
         { name: "Settings", href: "/settings", icon: Settings },
     ];
 
