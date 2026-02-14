@@ -79,6 +79,7 @@ export default function MaintenancePage() {
           *,
           properties (*)
         `)
+                // Force Wildcard Select to fix 400 Bad Request
                 .neq('status', 'Resolved')
                 .neq('status', 'closed')
                 .order('priority', { ascending: false })
