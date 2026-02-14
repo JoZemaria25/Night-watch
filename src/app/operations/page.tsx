@@ -105,30 +105,13 @@ export default function MaintenancePage() {
     // --- Logic: Smart Renewal ---
 
     const initiateRenewal = (ticket: MaintenanceTicket) => {
-        // 1. Extract Tenant Name
-        // Pattern: "Tenant: John Doe\n" or just extract from title if description is unstructured
-        // Current Night Watch pattern in description: "Lease for [Name] at..."
-        // Current Night Watch pattern in title: "Lease Expiring: [Name]"
+        // 1. Extract Tenant Name from Title (Format: "Lease Expiry: [Name]")
+        const extractedName = ticket.title.replace('Lease Expiry:', '').replace('Lease Expiring:', '').trim();
+        const tenantName = extractedName || "Unknown Tenant";
 
-        let extractedName = "";
+        console.log("🔍 Attempting renewal for extracted name:", tenantName);
 
-        // Try Title Parsing first (More reliable in current Engine logic)
-        const titleMatch = ticket.title.match(/Lease Expiring: (.*)/);
-        if (titleMatch) {
-            extractedName = titleMatch[1].trim();
-        } else {
-            // Fallback to Description Regex as requested
-            const descMatch = ticket.description?.match(/Tenant: (.*?)\n/);
-            if (descMatch) extractedName = descMatch[1].trim();
-        }
-
-        if (!extractedName) {
-            // Fallback: Try to find name in "Lease for [Name] at"
-            const specificMatch = ticket.description?.match(/Lease for (.*?) at/);
-            if (specificMatch) extractedName = specificMatch[1].trim();
-        }
-
-        setRenewalTenantName(extractedName);
+        setRenewalTenantName(tenantName);
         setSelectedTicket(ticket);
         setRenewalOpen(true);
     };
@@ -138,37 +121,39 @@ export default function MaintenancePage() {
         setProcessingId(selectedTicket.id);
 
         try {
-            // 1. Find the Tenant
-            const { data: tenants, error: searchError } = await supabase
+            // Step A: Find the Tenant
+            console.log(`🔍 Searching tenants table for: ${renewalTenantName}`);
+            const { data: tenantData, error: tenantErr } = await supabase
                 .from('tenants')
                 .select('id')
                 .ilike('full_name', `%${renewalTenantName}%`)
-                .eq('status', 'Active'); // Only renew active tenants
+                .single();
 
-            if (searchError || !tenants || tenants.length === 0) {
-                alert(`Could not find active tenant matching "${renewalTenantName}". Please verify the name manually.`);
+            // Note: .single() returns error if 0 or >1 rows found, handling both cases.
+            if (tenantErr || !tenantData) {
+                console.error("❌ Tenant Lookup Failed:", tenantErr);
+                alert(`Failed to find a unique tenant named "${renewalTenantName}". Check spelling or duplicates.`);
                 setProcessingId(null);
                 return;
             }
 
-            if (tenants.length > 1) {
-                alert(`Multiple tenants found matching "${renewalTenantName}". Please resolve manually to avoid errors.`);
-                setProcessingId(null);
-                return;
-            }
+            console.log("✅ Tenant Found. ID:", tenantData.id);
 
-            const tenantId = tenants[0].id;
-
-            // 2. Update Tenant Lease End
-            const { error: updateError } = await supabase
+            // Step B: Update Lease Date
+            const { error: updateErr } = await supabase
                 .from('tenants')
                 .update({ lease_end: renewalDate })
-                .eq('id', tenantId);
+                .eq('id', tenantData.id);
 
-            if (updateError) throw updateError;
+            if (updateErr) {
+                console.error("❌ Lease Update Failed:", updateErr);
+                alert("Failed to update the lease date in the database.");
+                setProcessingId(null);
+                return;
+            }
 
-            // 3. Resolve Ticket
-            const { error: ticketError } = await supabase
+            // Step C: Resolve Ticket
+            const { error: ticketErr } = await supabase
                 .from('maintenance_requests')
                 .update({
                     status: 'Resolved',
@@ -176,16 +161,17 @@ export default function MaintenancePage() {
                 })
                 .eq('id', selectedTicket.id);
 
-            if (ticketError) throw ticketError;
+            if (ticketErr) console.error("❌ Ticket Resolve Failed:", ticketErr);
 
-            // Success
+            console.log("✅ Renewal Protocol Complete.");
+            alert("Lease successfully renewed!");
             setRenewalOpen(false);
             setRenewalDate("");
             fetchTickets(); // Refresh list
 
-        } catch (err: any) {
-            console.error("Renewal failed:", err);
-            alert("Action failed: " + err.message);
+        } catch (err) {
+            console.error("❌ Critical System Error during renewal:", err);
+            alert("A critical error occurred. Check the console.");
         } finally {
             setProcessingId(null);
         }
