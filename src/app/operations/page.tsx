@@ -213,38 +213,38 @@ export default function MaintenancePage() {
     });
 
     return (
-        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 md:p-12">
+        <main className="min-h-screen bg-[#0B0F19] text-gray-100 p-6 md:p-12 font-sans">
             <div className="max-w-5xl mx-auto space-y-8">
 
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                        <h1 className="text-3xl font-bold tracking-tight text-white">
                             Operations Hub
                         </h1>
-                        <p className="text-zinc-500 dark:text-zinc-400 mt-2">
+                        <p className="text-gray-400 mt-2">
                             Manage portfolio compliance and tenant maintenance requests.
                         </p>
                     </div>
-                    <Button onClick={fetchTickets} variant="outline" size="sm" className="gap-2">
+                    <Button onClick={fetchTickets} variant="outline" size="sm" className="gap-2 border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white">
                         Refresh
                     </Button>
                 </div>
 
                 {/* Custom Tabs */}
-                <div className="bg-white dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 inline-flex">
+                <div className="bg-gray-900/50 p-1 rounded-lg border border-gray-800/50 inline-flex backdrop-blur-sm">
                     <button
                         onClick={() => setActiveTab('compliance')}
                         className={cn(
-                            "flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
+                            "flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 border",
                             activeTab === 'compliance'
-                                ? "bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900/50"
-                                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
+                                : "text-gray-400 border-transparent hover:bg-gray-800 hover:text-gray-200"
                         )}
                     >
                         <ShieldCheck className="h-4 w-4" />
                         Compliance
-                        <Badge variant="secondary" className="ml-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                        <Badge variant="secondary" className="ml-2 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">
                             {tickets.filter(t => t.title.toLowerCase().includes('lease expiring') || t.issue_type === 'Compliance').length}
                         </Badge>
                     </button>
@@ -252,15 +252,15 @@ export default function MaintenancePage() {
                     <button
                         onClick={() => setActiveTab('maintenance')}
                         className={cn(
-                            "flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
+                            "flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 border",
                             activeTab === 'maintenance'
-                                ? "bg-zinc-100 text-zinc-900 shadow-sm border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700"
-                                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                ? "bg-gray-800 text-gray-100 border-gray-700 shadow-sm"
+                                : "text-gray-400 border-transparent hover:bg-gray-800 hover:text-gray-200"
                         )}
                     >
                         <Wrench className="h-4 w-4" />
                         Maintenance
-                        <Badge variant="secondary" className="ml-2 bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300">
+                        <Badge variant="secondary" className="ml-2 bg-gray-700 text-gray-300 hover:bg-gray-600">
                             {tickets.filter(t => !(t.title.toLowerCase().includes('lease expiring') || t.issue_type === 'Compliance')).length}
                         </Badge>
                     </button>
@@ -269,14 +269,14 @@ export default function MaintenancePage() {
                 {/* Content Area */}
                 <div className="space-y-4">
                     {loading ? (
-                        <div className="text-center py-20 text-zinc-400 animate-pulse">
+                        <div className="text-center py-20 text-gray-500 animate-pulse">
                             Loading Operations Data...
                         </div>
                     ) : filteredTickets.length === 0 ? (
-                        <div className="text-center py-20 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
-                            <CheckCircle2 className="h-10 w-10 text-zinc-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">All clear</h3>
-                            <p className="text-zinc-500">No pending items in this category.</p>
+                        <div className="text-center py-20 border-2 border-dashed border-gray-800 rounded-xl bg-gray-900/30">
+                            <CheckCircle2 className="h-10 w-10 text-gray-700 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-gray-200">All clear</h3>
+                            <p className="text-gray-500">No pending items in this category.</p>
                         </div>
                     ) : (
                         filteredTickets.map((ticket) => {
@@ -286,11 +286,12 @@ export default function MaintenancePage() {
                                 <div
                                     key={ticket.id}
                                     className={cn(
-                                        "group relative overflow-hidden rounded-xl border p-5 transition-all hover:shadow-md",
-                                        "bg-white dark:bg-zinc-900",
+                                        "group relative overflow-hidden rounded-xl border p-5 transition-all duration-300",
+                                        "bg-gray-900/40 backdrop-blur-sm",
+                                        "hover:bg-gray-800/40 hover:border-gray-700 hover:shadow-lg",
                                         isUrgent
-                                            ? "border-red-200 bg-red-50/30 dark:border-red-900/50 dark:bg-red-950/10"
-                                            : "border-zinc-200 dark:border-zinc-800"
+                                            ? "border-red-900/30 bg-red-900/10 hover:bg-red-900/20"
+                                            : "border-gray-800/60"
                                     )}
                                 >
                                     <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
@@ -298,35 +299,35 @@ export default function MaintenancePage() {
                                         {/* Left: Icon & Info */}
                                         <div className="flex items-start gap-4">
                                             <div className={cn(
-                                                "p-3 rounded-lg mt-1",
+                                                "p-3 rounded-lg mt-1 border",
                                                 activeTab === 'compliance'
-                                                    ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
-                                                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                                    ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                                    : "bg-gray-800 text-gray-400 border-gray-700"
                                             )}>
                                                 {activeTab === 'compliance' ? <ShieldCheck className="h-6 w-6" /> : <Wrench className="h-6 w-6" />}
                                             </div>
 
                                             <div className="space-y-1">
                                                 <div className="flex items-center gap-3">
-                                                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                                                    <h3 className="text-lg font-semibold text-gray-100 group-hover:text-white transition-colors">
                                                         {ticket.title}
                                                     </h3>
                                                     {isUrgent && (
-                                                        <Badge variant="destructive" className="animate-pulse shadow-sm">
+                                                        <Badge variant="destructive" className="animate-pulse shadow-sm bg-red-500/20 text-red-200 border-red-500/30 border">
                                                             URGENT
                                                         </Badge>
                                                     )}
-                                                    <Badge variant="outline" className="text-xs text-zinc-500 font-mono">
+                                                    <Badge variant="outline" className="text-xs text-gray-500 font-mono border-gray-700">
                                                         {format(new Date(ticket.created_at), 'MMM dd')}
                                                     </Badge>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                                                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <span className="font-medium text-gray-300">
                                                         {ticket.properties?.title || ticket.properties?.name || ticket.properties?.address || "Unknown Property"}
                                                     </span>
                                                     <span>•</span>
-                                                    <span className="truncate max-w-md">
+                                                    <span className="truncate max-w-md text-gray-400">
                                                         {ticket.description.split('\n')[0]}
                                                     </span>
                                                 </div>
@@ -339,7 +340,7 @@ export default function MaintenancePage() {
                                                 <Button
                                                     onClick={() => initiateRenewal(ticket)}
                                                     disabled={!!processingId}
-                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm w-full md:w-auto"
+                                                    className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20 w-full md:w-auto border border-indigo-500/50"
                                                 >
                                                     {processingId === ticket.id ? "Processing..." : "Renew Lease"}
                                                 </Button>
@@ -348,7 +349,7 @@ export default function MaintenancePage() {
                                                     onClick={() => handleMarkDone(ticket.id)}
                                                     disabled={!!processingId}
                                                     variant="outline"
-                                                    className="border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 w-full md:w-auto"
+                                                    className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white dark:border-gray-700 dark:hover:bg-gray-800 w-full md:w-auto"
                                                 >
                                                     {processingId === ticket.id ? "Saving..." : "Mark Done"}
                                                 </Button>
@@ -362,29 +363,30 @@ export default function MaintenancePage() {
                 </div>
 
                 {/* Smart Renewal Dialog */}
+                {/* Smart Renewal Dialog */}
                 <Dialog open={renewalOpen} onOpenChange={setRenewalOpen}>
-                    <DialogContent className="sm:max-w-[425px]">
+                    <DialogContent className="sm:max-w-[425px] bg-[#0B0F19] border-gray-800 text-gray-100">
                         <DialogHeader>
-                            <DialogTitle>Smart Renewal Protocol</DialogTitle>
-                            <DialogDescription>
-                                Extend the lease for <strong>{renewalTenantName || "Unknown Tenant"}</strong> and resolve the compliance alert.
+                            <DialogTitle className="text-white">Smart Renewal Protocol</DialogTitle>
+                            <DialogDescription className="text-gray-400">
+                                Extend the lease for <strong className="text-indigo-400">{renewalTenantName || "Unknown Tenant"}</strong> and resolve the compliance alert.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="date">New Lease End Date</Label>
+                                <Label htmlFor="date" className="text-gray-300">New Lease End Date</Label>
                                 <Input
                                     id="date"
                                     type="date"
                                     value={renewalDate}
                                     onChange={(e) => setRenewalDate(e.target.value)}
-                                    className="col-span-3"
+                                    className="col-span-3 bg-gray-900 border-gray-800 text-white focus:ring-indigo-500 focus:border-indigo-500"
                                 />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setRenewalOpen(false)}>Cancel</Button>
-                            <Button onClick={handleConfirmRenewal} disabled={!renewalDate || !!processingId}>
+                            <Button variant="outline" onClick={() => setRenewalOpen(false)} className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">Cancel</Button>
+                            <Button onClick={handleConfirmRenewal} disabled={!renewalDate || !!processingId} className="bg-indigo-600 hover:bg-indigo-500 text-white">
                                 {processingId ? "Updating Database..." : "Confirm Renewal"}
                             </Button>
                         </DialogFooter>
