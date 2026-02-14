@@ -40,8 +40,10 @@ type MaintenanceTicket = {
     issue_type: string;
     unit_id: string | null;
     properties: {
-        address: string;
-        name: string | null;
+        address?: string;
+        name?: string;
+        title?: string;
+        [key: string]: any;
     } | null;
 };
 
@@ -75,10 +77,7 @@ export default function MaintenancePage() {
                 .from('maintenance_requests')
                 .select(`
           *,
-          properties (
-            name,
-            address
-          )
+          properties (*)
         `)
                 .neq('status', 'Resolved')
                 .neq('status', 'closed')
@@ -337,7 +336,7 @@ export default function MaintenancePage() {
 
                                                 <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
                                                     <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                                                        {ticket.properties?.address || "Unknown Property"}
+                                                        {ticket.properties?.title || ticket.properties?.name || ticket.properties?.address || "Unknown Property"}
                                                     </span>
                                                     <span>•</span>
                                                     <span className="truncate max-w-md">
