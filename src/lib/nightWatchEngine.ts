@@ -55,7 +55,13 @@ export async function checkCompliance(supabase: any) {
         return { checkedCount: 0, violationCount: 0, violations: [] };
     }
 
+    // 2. DUPLICATE CHECK
+    // Only fetch existing tickets ONCE to avoid N+1 queries ideally, but for now we keep loop logic safe.
+    // ... Optimized loop ...
+
     // 2. LOOP: Check `tenant.lease_end` vs Today
+    const dbErrors: string[] = []; // Changed: Collect errors here
+
     for (const tenant of tenants) {
         checkedCount++;
         const prop = tenant.properties;
@@ -113,8 +119,9 @@ export async function checkCompliance(supabase: any) {
                         });
 
                     if (insertError) {
-                        console.error(`❌ DB INSERT FAILED for ${tenant.full_name}:`, JSON.stringify(insertError, null, 2));
-                        // We do NOT decrement violationCount here, because it IS a violation, just failed to log.
+                        const errorMsg = `❌ DB INSERT FAILED for ${tenant.full_name}: ${JSON.stringify(insertError)}`;
+                        console.error(errorMsg);
+                        dbErrors.push(errorMsg); // Capture error
                     } else {
                         console.log(`✅ Ticket Created: ${ticketTitle}`);
                         violations.push({
@@ -174,7 +181,7 @@ export async function checkCompliance(supabase: any) {
         console.warn("⚠️ Could not log Night Watch run: Missing Organization ID.");
     }
 
-    return { checkedCount, violationCount, violations };
+    return { checkedCount, violationCount, violations, errors: dbErrors };
 }
 
 // Keeping for backward compatibility if needed

@@ -56,16 +56,23 @@ export default function DashboardPage() {
 
             {/* Run Button */}
             <button
+              type="button" // Prevent form submission
               onClick={async () => {
                 try {
                   const response = await fetch('/api/cron/night-watch', { method: 'POST' });
-                  const result = await response.json();
+                  const data = await response.json();
 
-                  if (response.ok && result.success) {
-                    alert(`Night Watch Complete! ✅\n${result.message}`);
-                    window.location.reload(); // Refresh to show new tickets
+                  if (response.ok && data.success) {
+                    if (data.data?.errors && data.data.errors.length > 0) {
+                      // Success with warnings/errors
+                      alert(`Scan Complete, BUT the database rejected ticket creation:\n\n${data.data.errors.join("\n")}`);
+                    } else {
+                      // Pure Success
+                      alert(`Night Watch Complete! ✅\nGenerated ${data.data?.violationCount || 0} tickets.`);
+                    }
+                    // REMOVED: window.location.reload(); 
                   } else {
-                    alert(`Night Watch Failed ❌\nError: ${result.error || 'Unknown Error'}`);
+                    alert(`Night Watch Failed ❌\nError: ${data.data?.error || data.error || 'Unknown Error'}`);
                   }
                 } catch (err: any) {
                   alert(`Network Error ❌\n${err.message}`);
