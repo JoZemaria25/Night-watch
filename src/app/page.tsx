@@ -57,11 +57,18 @@ export default function DashboardPage() {
             {/* Run Button */}
             <button
               onClick={async () => {
-                const result = await triggerNightWatchManually();
-                if (result.success) {
-                  alert(`Night Watch Complete! ✅\n${result.message}`);
-                } else {
-                  alert(`Night Watch Failed ❌\nError: ${result.error}`);
+                try {
+                  const response = await fetch('/api/cron/night-watch', { method: 'POST' });
+                  const result = await response.json();
+
+                  if (response.ok && result.success) {
+                    alert(`Night Watch Complete! ✅\n${result.message}`);
+                    window.location.reload(); // Refresh to show new tickets
+                  } else {
+                    alert(`Night Watch Failed ❌\nError: ${result.error || 'Unknown Error'}`);
+                  }
+                } catch (err: any) {
+                  alert(`Network Error ❌\n${err.message}`);
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg shadow-purple-600/25"
