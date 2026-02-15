@@ -112,7 +112,6 @@ export async function checkCompliance(supabase: any) {
                             title: ticketTitle,
                             priority: "high", // CONFIRMED: High Priority
                             status: "open",
-                            unit_id: unitId,
                             description: description,
                             issue_type: 'Compliance', // REQUIRED: Fixes 400 Bad Request if missing/wrong case
                             organization_id: tenant.organization_id // REQUIRED: RLS Isolation
