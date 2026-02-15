@@ -107,13 +107,16 @@ export async function checkCompliance(supabase: any) {
                             priority: "high", // CONFIRMED: High Priority
                             status: "open",
                             unit_id: unitId,
-                            description: description
+                            description: description,
+                            issue_type: 'Compliance', // REQUIRED: Fixes 400 Bad Request if missing/wrong case
+                            organization_id: tenant.organization_id // REQUIRED: RLS Isolation
                         });
 
                     if (insertError) {
-                        console.error(`❌ Failed to create ticket for ${tenant.full_name}:`, insertError);
+                        console.error(`❌ DB INSERT FAILED for ${tenant.full_name}:`, JSON.stringify(insertError, null, 2));
                         // We do NOT decrement violationCount here, because it IS a violation, just failed to log.
                     } else {
+                        console.log(`✅ Ticket Created: ${ticketTitle}`);
                         violations.push({
                             tenant: tenant.full_name,
                             daysRemaining,
