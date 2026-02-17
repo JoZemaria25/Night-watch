@@ -112,8 +112,7 @@ export async function checkCompliance(supabase: any) {
                         status: "open",
                         description: description,
                         issue_type: 'Compliance',
-                        organization_id: tenant.organization_id,
-                        unit_id: prop?.id // Keep linkage
+                        organization_id: tenant.organization_id
                     });
 
                 if (insertError) {
