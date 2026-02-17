@@ -55,11 +55,16 @@ export async function checkCompliance(supabase: any) {
         return { checkedCount: 0, violationCount: 0, violations: [] };
     }
 
-    // 2. DUPLICATE CHECK
-    // Only fetch existing tickets ONCE to avoid N+1 queries ideally, but for now we keep loop logic safe.
-    // ... Optimized loop ...
+    // 2. DUPLICATE CHECK (Gatekeeper)
+    const { data: openTickets } = await supabase
+        .from('maintenance_requests')
+        .select('title')
+        .eq('issue_type', 'Compliance')
+        .eq('status', 'Open');
 
-    // 2. LOOP: Check `tenant.lease_end` vs Today
+    const existingTitles = new Set(openTickets?.map((t: any) => t.title) || []);
+
+    // 3. LOOP: Check `tenant.lease_end` vs Today
     const dbErrors: string[] = []; // Changed: Collect errors here
 
     for (const tenant of tenants) {
@@ -87,48 +92,51 @@ export async function checkCompliance(supabase: any) {
             // 4. VIOLATION ACTION 1 (DB): Create a `maintenance_request`
             const ticketTitle = `Lease Expiring: ${tenant.full_name}`;
             const address = prop?.address || "Unknown Property";
-            const unitId = prop?.id || null;
+            // const unitId = prop?.id || null; // Not needed for ID check anymore, but good for record
+
+            // --- GATEKEEPER CHECK ---
+            if (existingTitles.has(ticketTitle)) {
+                console.log(`⏸️ Skipped: Ticket already exists for ${tenant.full_name}`);
+                continue;
+            }
 
             const description = `SYSTEM AUTOMATION:\nLease for ${tenant.full_name} at ${address} ends on ${tenant.lease_end} (${daysRemaining} days left).\n\nAction Required: Renew or vacate.\n\n[Triggered by Night Watch]`;
 
             // Wrap DB interactions in try/catch so the loop continues even if one fails
             try {
-                let existing = null;
-                if (unitId) {
-                    const { data } = await supabase
-                        .from('maintenance_requests')
-                        .select('id')
-                        .eq('unit_id', unitId)
-                        .eq('title', ticketTitle)
-                        .neq('status', 'closed')
-                        .maybeSingle();
-                    existing = data;
-                }
+                const { error: insertError } = await supabase
+                    .from('maintenance_requests')
+                    .insert({
+                        title: ticketTitle,
+                        priority: "high",
+                        status: "open",
+                        description: description,
+                        issue_type: 'Compliance',
+                        organization_id: tenant.organization_id,
+                        unit_id: prop?.id // Keep linkage
+                    });
 
-                if (!existing) {
-                    const { error: insertError } = await supabase
-                        .from('maintenance_requests')
-                        .insert({
-                            title: ticketTitle,
-                            priority: "high", // CONFIRMED: High Priority
-                            status: "open",
-                            description: description,
-                            issue_type: 'Compliance', // REQUIRED: Fixes 400 Bad Request if missing/wrong case
-                            organization_id: tenant.organization_id // REQUIRED: RLS Isolation
-                        });
+                if (insertError) {
+                    const errorMsg = `❌ DB INSERT FAILED for ${tenant.full_name}: ${JSON.stringify(insertError)}`;
+                    console.error(errorMsg);
+                    dbErrors.push(errorMsg);
+                } else {
+                    console.log(`✅ Ticket Created: ${ticketTitle}`);
+                    violations.push({
+                        tenant: tenant.full_name,
+                        daysRemaining,
+                        ticketTitle
+                    });
 
-                    if (insertError) {
-                        const errorMsg = `❌ DB INSERT FAILED for ${tenant.full_name}: ${JSON.stringify(insertError)}`;
-                        console.error(errorMsg);
-                        dbErrors.push(errorMsg); // Capture error
-                    } else {
-                        console.log(`✅ Ticket Created: ${ticketTitle}`);
-                        violations.push({
-                            tenant: tenant.full_name,
-                            daysRemaining,
-                            ticketTitle
-                        });
-                    }
+                    // 5. VIOLATION ACTION 2 (EMAIL): Send Notification
+                    // Only send if ticket creation used to prevent spam loop if DB fails but email succeeds (though atomic would be better)
+                    await sendEmail({
+                        to: tenant.email,
+                        name: tenant.full_name,
+                        type: 'notice',
+                        address: address,
+                        daysRemaining: daysRemaining
+                    });
                 }
             } catch (err) {
                 console.error(`❌ Unexpected error processing ticket for ${tenant.full_name}:`, err);

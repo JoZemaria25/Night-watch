@@ -1,3 +1,5 @@
+import { Resend } from 'resend';
+
 export type EmailPayload = {
     to: string;
     name: string;
@@ -19,26 +21,27 @@ export async function sendEmail({ to, name, type, address, daysRemaining }: Emai
         body = `Dear ${name},\n\nThis is a formal notice that your lease at ${address} expires in less than 30 days (${daysRemaining} days remaining).\n\nPlease contact us immediately to discuss renewal options or move-out procedures.\n\nSincerely,\nThe Night Watch`;
     }
 
-    // 2. Mock Send (Logging to Console)
-    console.log(`\n--- 📧 EMAIL SIMULATION ---`);
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Body: \n${body}`);
-    console.log(`---------------------------\n`);
+    // 2. Send via Resend
+    try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
 
-    /**
-     * V2 IMPLEMENTATION:
-     * 
-     * import { Resend } from 'resend';
-     * const resend = new Resend(process.env.RESEND_API_KEY);
-     * 
-     * await resend.emails.send({
-     *   from: 'Night Watch <system@nightwatch.com>',
-     *   to: to,
-     *   subject: subject,
-     *   text: body
-     * });
-     */
+        const { data, error } = await resend.emails.send({
+            from: 'Night Watch <onboarding@resend.dev>', // TODO: Update to production domain
+            to: to,
+            subject: subject,
+            text: body
+        });
 
-    return true;
+        if (error) {
+            console.error("❌ Resend Error:", error);
+            return false;
+        }
+
+        console.log(`✅ Email sent to ${to}: ${data?.id}`);
+        return true;
+
+    } catch (err) {
+        console.error("❌ Unexpected error sending email:", err);
+        return false;
+    }
 }
