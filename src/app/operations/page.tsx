@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import VendorMatchmaker from "@/components/VendorMatchmaker";
 
 // --- Types ---
 
@@ -362,7 +363,17 @@ export default function MaintenancePage() {
                     )}
                 </div>
 
-                {/* Smart Renewal Dialog */}
+                {/* Vendor Matchmaker Demo Section */}
+                <div className="mt-12 pt-8 border-t border-gray-800/60">
+                    <div className="mb-4">
+                        <h2 className="text-xl font-semibold text-gray-200">Vendor Assignment (Demo)</h2>
+                        <p className="text-sm text-gray-500">Live preview of the new intelligent vendor matchmaking system.</p>
+                    </div>
+                    <div className="bg-white text-gray-900 rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                        <VendorMatchmaker />
+                    </div>
+                </div>
+
                 {/* Smart Renewal Dialog */}
                 <Dialog open={renewalOpen} onOpenChange={setRenewalOpen}>
                     <DialogContent className="sm:max-w-[425px] bg-[#0B0F19] border-gray-800 text-gray-100">
