@@ -65,8 +65,18 @@ export default function ReportIssueModal({ isOpen, onClose, onSuccess }: { isOpe
     if (!isOpen) return null;
 
     const handleSubmit = async () => {
+        if (!unit) {
+            setError("You must select a property for this request.");
+            return;
+        }
+
         if (!description) {
             setError("Please provide a description");
+            return;
+        }
+
+        if (!organizationId) {
+            setError("Organization scope is missing. Please refresh.");
             return;
         }
 
@@ -74,27 +84,21 @@ export default function ReportIssueModal({ isOpen, onClose, onSuccess }: { isOpe
         setError('');
 
         try {
-            // 1. Get the current user
-            const { data: { user } } = await supabase.auth.getUser();
-
             const title = issueType === 'repair' ? 'Repair Request' : 'Inspection Request';
 
-            const payload: any = {
+            const payload = {
                 title: title,
                 description: description,
-                priority: 'medium',
-                status: 'open',
-                unit_id: unit || null
+                priority: 'normal',
+                status: 'Open',
+                property_id: unit,
+                issue_type: 'Maintenance',
+                organization_id: organizationId
             };
-
-            // In 'Multi-Tenancy Integration', we ensure org_id is present
-            if (organizationId) {
-                payload.organization_id = organizationId;
-            }
 
             const { error: insertError } = await supabase
                 .from('maintenance_requests')
-                .insert(payload);
+                .insert([payload]); // Note: .insert() expects an array or object, passing as an array is standard for single row insert.
 
             if (insertError) throw insertError;
 
@@ -132,8 +136,8 @@ export default function ReportIssueModal({ isOpen, onClose, onSuccess }: { isOpe
                     <button
                         onClick={() => setIssueType('repair')}
                         className={`py-2 px-4 rounded-md text-sm font-medium transition-all ${issueType === 'repair'
-                                ? 'bg-amber-600 text-white shadow-lg'
-                                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                            ? 'bg-amber-600 text-white shadow-lg'
+                            : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                             }`}
                     >
                         Repair Need
@@ -141,8 +145,8 @@ export default function ReportIssueModal({ isOpen, onClose, onSuccess }: { isOpe
                     <button
                         onClick={() => setIssueType('inspection')}
                         className={`py-2 px-4 rounded-md text-sm font-medium transition-all ${issueType === 'inspection'
-                                ? 'bg-amber-600 text-white shadow-lg'
-                                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                            ? 'bg-amber-600 text-white shadow-lg'
+                            : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                             }`}
                     >
                         Inspection
