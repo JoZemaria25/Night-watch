@@ -84,12 +84,12 @@ export default function VendorMatchmaker() {
     const otherVendors = allVendors.filter((v) => v.id !== recommendedVendor.id);
 
     return (
-        <div className="w-full mx-auto p-6 md:p-8 space-y-8 animate-in fade-in zoom-in-95 duration-500 bg-slate-900 border border-slate-800 rounded-2xl text-slate-100 shadow-xl">
+        <div className="w-full mx-auto bg-[#0f172a] border border-slate-800 rounded-2xl p-6 shadow-2xl shadow-black/50 animate-in fade-in zoom-in-95 duration-500">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/50 pb-6 mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold flex items-center gap-2 text-slate-100">
-                        <Wrench className="w-6 h-6 text-blue-500" />
+                    <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+                        <Wrench className="w-6 h-6 text-slate-400" />
                         Vendor Matchmaker
                     </h2>
                     <p className="text-slate-400 mt-1">
@@ -101,19 +101,19 @@ export default function VendorMatchmaker() {
                 </div>
 
                 <div className="flex gap-4">
-                    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 text-sm">
-                        <p className="text-blue-400 font-medium mb-1 flex items-center gap-1">
-                            <ShieldCheck className="w-4 h-4" /> NIESV Baseline
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3">
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <ShieldCheck className="w-3.5 h-3.5" /> NIESV Baseline
                         </p>
-                        <p className="text-xl font-bold text-slate-200">
+                        <p className="text-lg font-bold text-white">
                             {formatNaira(niesvBaseline)}
                         </p>
                     </div>
-                    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 text-sm">
-                        <p className="text-purple-400 font-medium mb-1 flex items-center gap-1">
-                            <Award className="w-4 h-4" /> Landlord Budget
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3">
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                            <Award className="w-3.5 h-3.5" /> Landlord Budget
                         </p>
-                        <p className="text-xl font-bold text-slate-200">
+                        <p className="text-lg font-bold text-white">
                             {formatNaira(landlordBudget)}
                         </p>
                     </div>
@@ -121,18 +121,18 @@ export default function VendorMatchmaker() {
             </div>
 
             {/* Recommended Vendor Section */}
-            <div className="relative bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-6 shadow-sm overflow-hidden">
-                <div className="absolute top-0 right-0 bg-emerald-500/20 text-emerald-400 border-l border-b border-emerald-500/30 px-4 py-1 rounded-bl-xl font-medium text-sm flex items-center gap-1 shadow-sm">
-                    <CheckCircle2 className="w-4 h-4" /> Recommended Vendor
+            <div className="bg-emerald-950/30 border-2 border-emerald-500/50 rounded-xl p-5 relative overflow-hidden mb-8">
+                <div className="absolute top-0 right-0 bg-emerald-500/20 text-emerald-400 border-l border-b border-emerald-500/30 px-4 py-1 rounded-bl-xl font-medium text-xs flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Recommended Vendor
                 </div>
 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mt-2">
-                    <div className="space-y-4">
+                    <div className="space-y-4 w-full md:w-auto">
                         <div>
-                            <h3 className="text-2xl font-extrabold text-emerald-50">
+                            <h3 className="text-white text-xl font-bold tracking-tight">
                                 {recommendedVendor.name}
                             </h3>
-                            <div className="flex items-center gap-4 mt-2 text-emerald-200/80 text-sm font-medium">
+                            <div className="flex items-center gap-4 mt-2 text-emerald-200/70 text-sm">
                                 <span className="flex items-center gap-1">
                                     <Star className="w-4 h-4 fill-emerald-500 text-emerald-500" />
                                     {recommendedVendor.rating} Rating
@@ -145,11 +145,11 @@ export default function VendorMatchmaker() {
                         </div>
 
                         <div className="flex items-end gap-3">
-                            <div className="text-3xl font-black text-emerald-400 tracking-tight">
+                            <div className="text-emerald-400 text-3xl font-black">
                                 {formatNaira(recommendedVendor.cost)}
                             </div>
                             {recommendedVendor.cost < niesvBaseline && (
-                                <span className="mb-1 text-xs font-semibold px-2 py-1 bg-emerald-900/50 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
+                                <span className="mb-1 text-xs font-semibold px-2 py-0.5 bg-emerald-900/40 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
                                     <TrendingDown className="w-3 h-3" /> Below Baseline
                                 </span>
                             )}
@@ -159,9 +159,9 @@ export default function VendorMatchmaker() {
                     <button
                         onClick={() => setAssignedVendorId(recommendedVendor.id)}
                         disabled={assignedVendorId === recommendedVendor.id}
-                        className={`px-8 py-3 rounded-xl font-bold text-lg shadow-sm transition-all flex items-center gap-2 ${assignedVendorId === recommendedVendor.id
-                            ? "bg-emerald-700/50 text-emerald-100 cursor-default"
-                            : "bg-emerald-600 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-600/20 text-white hover:-translate-y-0.5"
+                        className={`px-6 py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 w-full md:w-auto ${assignedVendorId === recommendedVendor.id
+                            ? "bg-emerald-600/50 text-emerald-100 cursor-default"
+                            : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/50"
                             }`}
                     >
                         {assignedVendorId === recommendedVendor.id ? (
@@ -176,35 +176,35 @@ export default function VendorMatchmaker() {
             </div>
 
             {/* Alternative Vendors Section */}
-            <div className="space-y-4 pt-4 border-t border-slate-800">
-                <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2">
-                    Alternative Bids <span className="text-slate-500 font-normal text-sm">({otherVendors.length})</span>
+            <div>
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+                    Alternative Bids <span className="font-normal text-slate-500">({otherVendors.length})</span>
                 </h3>
 
-                <div className="grid gap-3">
+                <div className="space-y-3">
                     {otherVendors.map((vendor) => {
                         const isOverBudget = vendor.cost > landlordBudget;
 
                         return (
                             <div
                                 key={vendor.id}
-                                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl hover:bg-slate-800 hover:border-slate-700 transition-colors gap-4"
+                                className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors hover:bg-slate-800/80"
                             >
                                 <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <h4 className="font-semibold text-slate-200">{vendor.name}</h4>
+                                    <div className="flex items-center gap-3">
+                                        <h4 className="text-slate-200 font-semibold">{vendor.name}</h4>
                                         {isOverBudget ? (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-900/30 text-red-400 border border-red-900/50">
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-950/40 text-red-400 border border-red-900/30">
                                                 <TrendingUp className="w-3 h-3" /> Over Budget
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700/50 text-slate-400 border border-slate-700">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">
                                                 Under Budget
                                             </span>
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-3 mt-1.5 text-sm text-slate-400">
+                                    <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-400">
                                         <span className="flex items-center gap-1">
                                             <Star className="w-3.5 h-3.5 fill-amber-500/50 text-amber-500" />
                                             {vendor.rating}
@@ -219,24 +219,24 @@ export default function VendorMatchmaker() {
                                 <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-1/3">
                                     <div className="text-right">
                                         <div
-                                            className={`font-bold text-lg ${isOverBudget ? "text-red-400" : "text-slate-300"
+                                            className={`${isOverBudget ? "text-red-400 font-bold" : "text-white font-bold"
                                                 }`}
                                         >
                                             {formatNaira(vendor.cost)}
                                         </div>
                                         {isOverBudget && (
-                                            <div className="text-xs text-red-500/80 font-medium flex items-center justify-end gap-1">
+                                            <div className="text-[10px] text-red-500/70 font-medium uppercase tracking-wider mt-0.5 flex items-center justify-end gap-1">
                                                 <AlertCircle className="w-3 h-3" />
-                                                {formatNaira(vendor.cost - landlordBudget)} over
+                                                +{formatNaira(vendor.cost - landlordBudget)}
                                             </div>
                                         )}
                                     </div>
 
                                     <button
                                         onClick={() => setAssignedVendorId(vendor.id)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors border ${assignedVendorId === vendor.id
-                                            ? "bg-slate-700 text-white border-slate-600"
-                                            : "bg-slate-900/50 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white hover:border-slate-600"
+                                        className={`px-4 py-2 border rounded-lg text-sm transition-all ${assignedVendorId === vendor.id
+                                            ? "bg-slate-800 text-slate-500 border-slate-700 cursor-default"
+                                            : "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-600"
                                             }`}
                                     >
                                         {assignedVendorId === vendor.id ? "Assigned" : "Assign"}
