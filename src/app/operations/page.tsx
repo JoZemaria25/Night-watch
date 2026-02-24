@@ -369,7 +369,7 @@ export default function MaintenancePage() {
                         <h2 className="text-xl font-semibold text-gray-200">Vendor Assignment (Demo)</h2>
                         <p className="text-sm text-gray-500">Live preview of the new intelligent vendor matchmaking system.</p>
                     </div>
-                    <div className="bg-white text-gray-900 rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                    <div className="bg-transparent rounded-3xl overflow-hidden">
                         <VendorMatchmaker />
                     </div>
                 </div>

@@ -84,7 +84,7 @@ export default function VendorMatchmaker() {
     const otherVendors = allVendors.filter((v) => v.id !== recommendedVendor.id);
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in zoom-in-95 duration-500 bg-slate-900 border border-slate-800 rounded-2xl text-slate-100 shadow-xl">
+        <div className="w-full mx-auto p-6 md:p-8 space-y-8 animate-in fade-in zoom-in-95 duration-500 bg-slate-900 border border-slate-800 rounded-2xl text-slate-100 shadow-xl">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
                 <div>
@@ -121,7 +121,7 @@ export default function VendorMatchmaker() {
             </div>
 
             {/* Recommended Vendor Section */}
-            <div className="relative bg-emerald-900/20 border-2 border-emerald-500/50 rounded-2xl p-6 shadow-sm overflow-hidden">
+            <div className="relative bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-6 shadow-sm overflow-hidden">
                 <div className="absolute top-0 right-0 bg-emerald-500/20 text-emerald-400 border-l border-b border-emerald-500/30 px-4 py-1 rounded-bl-xl font-medium text-sm flex items-center gap-1 shadow-sm">
                     <CheckCircle2 className="w-4 h-4" /> Recommended Vendor
                 </div>
@@ -160,8 +160,8 @@ export default function VendorMatchmaker() {
                         onClick={() => setAssignedVendorId(recommendedVendor.id)}
                         disabled={assignedVendorId === recommendedVendor.id}
                         className={`px-8 py-3 rounded-xl font-bold text-lg shadow-sm transition-all flex items-center gap-2 ${assignedVendorId === recommendedVendor.id
-                            ? "bg-emerald-600/50 text-emerald-100 cursor-default border border-emerald-500/50"
-                            : "bg-emerald-600 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-900/50 text-white hover:-translate-y-0.5 border border-emerald-500/50"
+                            ? "bg-emerald-700/50 text-emerald-100 cursor-default"
+                            : "bg-emerald-600 hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-600/20 text-white hover:-translate-y-0.5"
                             }`}
                     >
                         {assignedVendorId === recommendedVendor.id ? (
