@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { format } from "date-fns";
 import {
@@ -11,7 +12,8 @@ import {
     Construction,
     Clock,
     CalendarDays,
-    Search
+    Search,
+    Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +53,7 @@ type MaintenanceTicket = {
 type TabType = 'compliance' | 'maintenance';
 
 export default function MaintenancePage() {
+    const router = useRouter();
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -264,6 +267,17 @@ export default function MaintenancePage() {
                         <Badge variant="secondary" className="ml-2 bg-gray-700 text-gray-300 hover:bg-gray-600">
                             {tickets.filter(t => !(t.title.toLowerCase().includes('lease expiring') || t.issue_type === 'Compliance')).length}
                         </Badge>
+                    </button>
+
+                    <button
+                        onClick={() => router.push('/operations/vendors')}
+                        className={cn(
+                            "flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 border",
+                            "text-gray-400 border-transparent hover:bg-gray-800 hover:text-gray-200"
+                        )}
+                    >
+                        <Briefcase className="h-4 w-4" />
+                        Vendors
                     </button>
                 </div>
 
