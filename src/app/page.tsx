@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Wrench, Play } from "lucide-react";
 
 // ✅ Named exports
-import { SystemHeartbeat } from "../components/SystemHeartbeat";
 import { SystemStatus } from "../components/SystemStatus";
 import { AssetStream } from "../components/AssetStream";
 import { TenantList } from "../components/TenantList";
@@ -23,6 +22,23 @@ export default function DashboardPage() {
   const [policies, setPolicies] = useState<PolicyRow[]>([
     { id: 1, scope: "global", metric: "lease_end", operator: "<", value: "30", recipient: "manager" }
   ]);
+
+  // Widget State
+  const [properties, setProperties] = useState([
+    { id: 1, name: "Victor Land", limit: 50000 },
+    { id: 2, name: "Sunset Apartments", limit: 150000 },
+    { id: 3, name: "Oceanview Estate", limit: 75000 }
+  ]);
+
+  const handleLimitChange = (id: number, newValue: string) => {
+    // Only allow numbers
+    const numValue = parseInt(newValue.replace(/\D/g, ''), 10) || 0;
+    setProperties(properties.map(p => p.id === id ? { ...p, limit: numValue } : p));
+  };
+
+  const handleSaveLimit = () => {
+    alert("Budget updated");
+  };
 
   return (
     <div className="flex-1 relative overflow-y-auto bg-[#0a0a0a] text-white min-h-screen">
@@ -89,7 +105,41 @@ export default function DashboardPage() {
         {/* ROW 1: Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2">
-            <SystemHeartbeat />
+
+            {/* Portfolio Maintenance Limits Widget */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg shadow-black/40 h-full">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-white">Portfolio Maintenance Limits</h3>
+                <p className="text-sm text-slate-400 mt-1">Auto-approval financial thresholds for vendor matchmaking.</p>
+              </div>
+
+              <div className="space-y-4">
+                {properties.map((property) => (
+                  <div key={property.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-800">
+                    <span className="font-semibold text-slate-200">{property.name}</span>
+
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₦</span>
+                        <input
+                          type="text"
+                          value={property.limit.toLocaleString()}
+                          onChange={(e) => handleLimitChange(property.id, e.target.value)}
+                          className="bg-[#0f172a] border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white pl-8 pr-4 py-2 rounded-lg outline-none w-48 font-mono text-right transition-all"
+                        />
+                      </div>
+                      <button
+                        onClick={handleSaveLimit}
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
           <SystemStatus />
         </div>
