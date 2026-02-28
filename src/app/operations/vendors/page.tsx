@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import {
     ShieldCheck,
     Clock,
@@ -78,6 +80,7 @@ const mockVendors: Vendor[] = [
 ];
 
 export default function VendorControlRoom() {
+    const [vendors, setVendors] = useState<Vendor[]>(mockVendors);
     const today = new Date();
 
     const isExpiringSoon = (dateString: string) => {
@@ -87,9 +90,21 @@ export default function VendorControlRoom() {
         return diffDays <= 30; // Flags any vendor expiring within 30 days (or already expired)
     };
 
-    const totalActive = mockVendors.filter(v => v.verification_status === 'Verified').length;
-    const pendingVerification = mockVendors.filter(v => v.verification_status === 'Pending').length;
-    const expiringSoonCount = mockVendors.filter(v => isExpiringSoon(v.insurance_expiration)).length;
+    const handleToggleStatus = (vendorId: string, currentStatus: Vendor['verification_status']) => {
+        setVendors(prevVendors =>
+            prevVendors.map(vendor => {
+                if (vendor.id === vendorId) {
+                    const newStatus = currentStatus === 'Verified' ? 'Suspended' : 'Verified';
+                    return { ...vendor, verification_status: newStatus };
+                }
+                return vendor;
+            })
+        );
+    };
+
+    const totalActive = vendors.filter(v => v.verification_status === 'Verified').length;
+    const pendingVerification = vendors.filter(v => v.verification_status === 'Pending').length;
+    const expiringSoonCount = vendors.filter(v => isExpiringSoon(v.insurance_expiration)).length;
 
     const maskAccount = (accountNumber: string) => {
         return `•••• ${accountNumber.slice(-4)}`;
@@ -181,7 +196,7 @@ export default function VendorControlRoom() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800/50">
-                                {mockVendors.map((vendor) => {
+                                {vendors.map((vendor) => {
                                     const hasExpiringIssue = isExpiringSoon(vendor.insurance_expiration);
                                     const formattedDate = new Date(vendor.insurance_expiration).toLocaleDateString('en-US', {
                                         year: 'numeric',
@@ -229,13 +244,28 @@ export default function VendorControlRoom() {
                                             {/* Column 6: Actions */}
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end space-x-2">
-                                                    <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors" title="Edit">
+                                                    <button
+                                                        onClick={() => alert('Edit Vendor Modal coming soon')}
+                                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                                                        title="Edit"
+                                                    >
                                                         <Edit className="h-4 w-4" />
                                                     </button>
-                                                    <button className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors" title="Suspend">
-                                                        <Ban className="h-4 w-4" />
+                                                    <button
+                                                        onClick={() => handleToggleStatus(vendor.id, vendor.verification_status)}
+                                                        className={`p-2 rounded-lg transition-colors ${vendor.verification_status === 'Verified'
+                                                                ? 'text-slate-400 hover:text-red-400 hover:bg-red-900/30'
+                                                                : 'text-slate-400 hover:text-emerald-400 hover:bg-emerald-900/30'
+                                                            }`}
+                                                        title={vendor.verification_status === 'Verified' ? "Suspend" : "Verify"}
+                                                    >
+                                                        {vendor.verification_status === 'Verified' ? <Ban className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
                                                     </button>
-                                                    <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors" title="More">
+                                                    <button
+                                                        onClick={() => alert('More Actions Modal coming soon')}
+                                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                                                        title="More"
+                                                    >
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </button>
                                                 </div>
