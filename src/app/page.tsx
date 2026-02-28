@@ -113,31 +113,29 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-400 mt-1">Auto-approval financial thresholds for vendor matchmaking.</p>
               </div>
 
-              <div className="space-y-4">
+              <div>
                 {properties.map((property) => (
-                  <div key={property.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-800">
-                    <span className="font-semibold text-slate-200">{property.name}</span>
+                  <div key={property.id} className="flex items-center justify-between py-4 border-b border-slate-800/50 last:border-0">
+                    <span className="text-slate-300 font-medium">{property.name}</span>
 
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₦</span>
-                        <input
-                          type="text"
-                          value={property.limit.toLocaleString()}
-                          onChange={(e) => handleLimitChange(property.id, e.target.value)}
-                          className="bg-[#0f172a] border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white pl-8 pr-4 py-2 rounded-lg outline-none w-48 font-mono text-right transition-all"
-                        />
-                      </div>
-                      <button
-                        onClick={handleSaveLimit}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-slate-700"
-                      >
-                        Save
-                      </button>
+                    <div className="flex items-center bg-slate-900/50 hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors rounded-lg px-3 py-1.5 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                      <span className="text-slate-500 mr-2">₦</span>
+                      <input
+                        type="text"
+                        value={property.limit.toLocaleString()}
+                        onChange={(e) => handleLimitChange(property.id, e.target.value)}
+                        className="bg-transparent text-white font-bold text-lg outline-none w-28 text-right focus:ring-0"
+                      />
                     </div>
                   </div>
                 ))}
               </div>
+              <button
+                onClick={handleSaveLimit}
+                className="w-full mt-4 bg-slate-800 hover:bg-emerald-600 text-white py-3 rounded-lg font-medium transition-all shadow-md"
+              >
+                Save Adjustments
+              </button>
             </div>
 
           </div>
